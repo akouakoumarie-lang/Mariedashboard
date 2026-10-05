@@ -711,7 +711,7 @@ input[type="range"] { width: 100%; accent-color: var(--pink); }
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s, transform .2s;
-  z-index: 60;
+  z-index: 1200;
   max-width: calc(100vw - 32px);
   text-align: center;
 }
@@ -801,3 +801,84 @@ input[type="range"] { width: 100%; accent-color: var(--pink); }
 .insp.tried { opacity: .8; }
 .rosary .chips { flex-wrap: wrap; justify-content: center; overflow: visible; padding: 12px 0 4px; gap: 6px; }
 .rosary .chip { padding: 6px 12px; font-size: 12.5px; }
+
+/* ---------- Carte des voyages ---------- */
+.map-page { position: relative; height: 100vh; height: 100dvh; overflow: hidden; }
+@media (min-width: 560px) { .map-page { height: calc(100vh - 48px); } }
+.map { position: absolute; inset: 0; background: #f6e6ec; z-index: 0; }
+.map-top {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 500;
+  padding: 18px 16px 10px;
+  background: linear-gradient(180deg, var(--bg) 55%, transparent);
+  pointer-events: none;
+}
+.map-top > * { pointer-events: auto; }
+.map-title { display: flex; gap: 12px; align-items: center; }
+.map-title .icon-btn { order: -1; }
+.map-banner { margin-top: 8px; background: var(--ink); color: #fff; border-radius: 16px; padding: 10px 14px; font-size: 13.5px; display: flex; gap: 8px; align-items: center; justify-content: space-between; box-shadow: 0 6px 18px rgba(255, 46, 138, .35); }
+.map-banner .btn { color: #fff; border-color: rgba(255, 255, 255, .3); }
+.map-cards {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  z-index: 500;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 16px 10px;
+  scrollbar-width: none;
+}
+.map-cards::-webkit-scrollbar { display: none; }
+.map-card {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 170px;
+  max-width: 230px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+  cursor: pointer;
+}
+.map-card .emo { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: var(--pink-soft); flex-shrink: 0; }
+.map-card .txt { display: flex; flex-direction: column; min-width: 0; }
+.map-card strong { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-card small { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.map-card .st { font-weight: 700; color: var(--pink); }
+.map-card.s-dream .st { color: var(--info); }
+.map-card.s-todo .st { color: var(--warn); }
+.map-card.s-ok .st { color: var(--good); }
+.map-card.add { color: var(--pink); border-style: dashed; border-color: var(--pink-2); min-width: 140px; }
+
+.pin {
+  width: 44px;
+  height: 44px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #ff2e8a, #ff8fc2);
+  border: 3px solid #fff;
+  box-shadow: 0 6px 14px rgba(120, 20, 70, .35);
+  display: grid;
+  place-items: center;
+}
+.pin span { transform: rotate(45deg); font-size: 20px; line-height: 1; }
+.pin.s-dream { background: linear-gradient(135deg, #a46bff, #d6b8ff); }
+.pin.s-todo { background: linear-gradient(135deg, #ff7a45, #ffc08a); }
+.pin.s-ok { background: #17111a url("leopard-pink.svg") 0 0 / 60px; }
+.pin.s-past { background: #b9a9b0; filter: grayscale(.4); }
+
+.trip-popup .leaflet-popup-content-wrapper { border-radius: 18px; box-shadow: 0 10px 30px rgba(120, 20, 70, .25); }
+.trip-popup .leaflet-popup-content { margin: 12px 14px; font-family: var(--sans); }
+.pp-h { font-family: var(--serif); font-weight: 700; font-size: 17px; margin-bottom: 2px; }
+.pp-s { font-size: 12.5px; color: #8d6f7a; }
+.pp-a { display: inline-block; margin-top: 8px; font-weight: 700; color: #ff2e8a !important; }
+.leaflet-control-zoom { margin-bottom: calc(170px + env(safe-area-inset-bottom)) !important; border: 0 !important; box-shadow: var(--shadow) !important; }
+.leaflet-control-attribution { font-size: 9px; }

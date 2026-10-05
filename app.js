@@ -5,6 +5,7 @@
 import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig, sendTestPush } from './cloud.js';
 import { pushSupport, registerSW, currentSubscription, enablePush, disablePush, generateKeys } from './push.js';
 import { PRAYERS, MYSTERIES, MYSTERY_OF_DAY, rosarySteps, NOVENA_TEMPLATES } from './prayer-data.js';
+import { mountMap, unmountMap, geocode, reverseGeocode, flagOf } from './map.js';
 
 const STORAGE_KEY = 'marie-dashboard:v1';
 
@@ -353,6 +354,9 @@ const ui = {
   editCloudConfig: false,
   pushDevice: 'unknown',
   inspFilter: 'all',
+  mapFilter: 'all',
+  mapView: null,
+  pickTrip: null,
   showPrayerText: true,
 };
 
@@ -863,7 +867,19 @@ function amountPrompt(title, hint, onSubmit) {
   });
 }
 
-function tripForm(trip) {
+// Trouve la position d'un voyage (OpenStreetMap) et complète le drapeau.
+async function locateTrip(trip) {
+  const g = await geocode(trip.destination);
+  if (!g) {
+    trip.geoTried = true;
+    return false;
+  }
+  Object.assign(trip, { lat: g.lat, lng: g.lng, country: g.country, geoTried: false });
+  if ((!trip.emoji || trip.emoji === '✈️') && g.country) trip.emoji = flagOf(g.country);
+  return true;
+}
+
+function tripForm(trip, preset = {}) {
   openForm({
     title: trip ? 'Modifier le voyage' : 'Nouveau voyage',
     fields: [
@@ -876,15 +892,20 @@ function tripForm(trip) {
       { name: 'image', label: 'Photo de la destination', type: 'image', max: 900 },
       { name: 'notes', label: 'Documents & notes', type: 'textarea', placeholder: 'Passeport, visa, numéros de réservation…' },
     ],
-    values: trip || { status: 'À planifier', emoji: '✈️' },
-    onSubmit: (d) => {
-      if (trip) Object.assign(trip, d);
-      else {
-        const t = { id: uid(), bookings: [], checklist: DEFAULT_CHECKLIST.map((text) => ({ id: uid(), text, done: false })), ...d };
-        state.trips.push(t);
-        location.hash = `#/voyage/${t.id}`;
+    values: trip || { status: 'À planifier', emoji: preset.emoji || '✈️', destination: preset.destination || '' },
+    onSubmit: async (d) => {
+      let target = trip;
+      if (trip) {
+        if (trip.destination !== d.destination) Object.assign(trip, { lat: undefined, lng: undefined, geoTried: false });
+        Object.assign(trip, d);
+      } else {
+        target = { id: uid(), bookings: [], checklist: DEFAULT_CHECKLIST.map((text) => ({ id: uid(), text, done: false })), ...d };
+        if (preset.lat !== undefined) Object.assign(target, { lat: preset.lat, lng: preset.lng, country: preset.country || '' });
+        state.trips.push(target);
+        if (preset.lat === undefined) location.hash = `#/voyage/${target.id}`;
       }
       commit('Voyage enregistré ✈️');
+      if (target.lat === undefined && (await locateTrip(target))) commit();
     },
     onDelete: trip
       ? () => {
@@ -1500,7 +1521,7 @@ function viewTrips() {
 
   return `
   <header class="dark-head">
-    <div class="head-row"><div><h1 class="title sparkle">Voyages</h1><div class="subtitle">Découvre le monde, à ton rythme.</div></div>${backBtn('#/accueil', true)}</div>
+    <div class="head-row"><div><h1 class="title sparkle">Voyages</h1><div class="subtitle">Découvre le monde, à ton rythme.</div></div><div class="btn-row"><a class="pill-btn" href="#/carte">🗺️ Ma carte</a>${backBtn('#/accueil', true)}</div></div>
     ${trip ? `<a class="photo-card ${trip.image ? '' : 'no-photo'}" href="#/voyage/${trip.id}" ${trip.image ? `style="background-image:url('${esc(trip.image)}')"` : ''}>
       <div class="k">Prochain voyage${trip.start && trip.start >= t ? ` · J-${daysBetween(t, trip.start)}` : ''}</div>
       <div class="h">${esc(trip.destination)} ${esc(trip.emoji || '')}</div>
@@ -1562,7 +1583,7 @@ function viewTrip(id) {
         return its.length ? `<div class="insp-grid">${its.map(inspCard).join('')}</div>` : `<div class="card">${emptyMsg('Restos, spots photo, hôtels… garde tes TikToks ici.')}</div>`;
       })()}
       ${tr.notes ? `${secHead('Documents & notes')}<div class="card small" style="white-space:pre-wrap">${esc(tr.notes)}</div>` : ''}
-      <div class="add-pill"><button class="btn soft" data-action="edit-trip" data-id="${tr.id}">${icon('pencil')} Modifier le voyage</button></div>
+      <div class="add-pill btn-row" style="justify-content:center"><button class="btn soft" data-action="edit-trip" data-id="${tr.id}">${icon('pencil')} Modifier le voyage</button><button class="btn ghost" data-action="map-pick" data-id="${tr.id}">📍 ${typeof tr.lat === 'number' ? 'Déplacer' : 'Placer'} sur la carte</button></div>
     </section>
   </div>`;
 }
@@ -1865,6 +1886,123 @@ function viewRosary() {
   </section>`;
 }
 
+
+/* ============================================================
+   Carte des voyages
+   ============================================================ */
+
+const TRIP_PIN_CLASS = { 'À planifier': 's-dream', 'À organiser': 's-todo', Planifié: 's-ok', Réservé: 's-ok', Terminé: 's-past' };
+const yearOf = (tr) => (tr.start ? tr.start.slice(0, 4) : '');
+
+function mapTrips() {
+  const f = ui.mapFilter;
+  return state.trips.filter((tr) => f === 'all' || (f === 'reves' ? !tr.start : yearOf(tr) === f));
+}
+
+function tripDates(tr) {
+  if (!tr.start) return 'Dates à définir';
+  return `${fmtDate(tr.start)}${tr.end ? ` → ${fmtDate(tr.end)}` : ''} ${yearOf(tr)}`;
+}
+
+function viewMap() {
+  const y = new Date().getFullYear();
+  const years = [...new Set([String(y), String(y + 1), ...state.trips.map(yearOf).filter(Boolean)])].sort();
+  const trips = mapTrips();
+  const countries = new Set(trips.map((tr) => tr.country).filter(Boolean));
+  const budget = sum(trips, (tr) => tr.budget);
+  const picking = ui.pickTrip ? findById(state.trips, ui.pickTrip) : null;
+  const chip = (k, l) => `<button class="chip ${ui.mapFilter === k ? 'active' : ''}" data-action="map-filter" data-filter="${k}">${l}</button>`;
+  return `
+  <section class="map-page">
+    <div id="map" class="map" aria-label="Carte de mes voyages"></div>
+    <div class="map-top">
+      <div class="map-title">
+        ${backBtn('#/voyages')}
+        <div><h1 class="title sparkle" style="font-size:24px">Ma carte</h1><div class="subtitle" style="margin:0">${plural(trips.length, 'voyage')} · ${plural(countries.size, 'pays', 'pays')} · ${eur(budget)}</div></div>
+      </div>
+      <div class="chips in-section" style="padding-top:10px">${chip('all', 'Tout')}${years.map((yy) => chip(yy, yy)).join('')}${chip('reves', '✨ Rêves')}</div>
+      ${picking ? `<div class="map-banner">📍 Touche la carte pour placer <strong>${esc(picking.destination)}</strong> <button class="btn sm ghost" data-action="map-pick-cancel">Annuler</button></div>` : ''}
+    </div>
+    <div class="map-cards">
+      ${trips
+        .map((tr) => `<button class="map-card ${TRIP_PIN_CLASS[tr.status] || ''}" data-action="map-focus" data-id="${tr.id}">
+          <span class="emo">${esc(tr.emoji || '✈️')}</span>
+          <span class="txt"><strong>${esc(tr.destination)}</strong><small>${esc(tripDates(tr))}</small><small class="st">${tr.lat === undefined ? '📍 À placer' : esc(tr.status)}</small></span>
+        </button>`)
+        .join('')}
+      <button class="map-card add" data-action="add-trip">${icon('plus')}<span class="txt"><strong>Nouveau</strong><small>ou touche la carte</small></span></button>
+    </div>
+  </section>`;
+}
+
+let mapApi = null;
+let geocoding = false;
+
+async function setupMap() {
+  const el = $('#map');
+  if (!el) return;
+  const trips = mapTrips();
+  const placed = trips.filter((tr) => typeof tr.lat === 'number');
+  const pins = placed.map((tr) => ({
+    id: tr.id,
+    lat: tr.lat,
+    lng: tr.lng,
+    title: tr.destination,
+    emoji: esc(tr.emoji || '✈️'),
+    cls: TRIP_PIN_CLASS[tr.status] || '',
+    popup: `<div class="pp"><div class="pp-h">${esc(tr.emoji || '')} ${esc(tr.destination)}</div><div class="pp-s">${esc(tripDates(tr))}</div><div class="pp-s">${esc(tr.status)}${tr.budget ? ` · ${eur(tr.budget)}` : ''}</div><a class="pp-a" href="#/voyage/${tr.id}">Voir le voyage →</a></div>`,
+  }));
+  const route = /^\d{4}$/.test(ui.mapFilter) ? placed.filter((tr) => tr.start).sort((a, b) => a.start.localeCompare(b.start)).map((tr) => [tr.lat, tr.lng]) : [];
+  mapApi = await mountMap(el, {
+    pins,
+    route,
+    view: ui.mapView,
+    onMove: (v) => {
+      ui.mapView = v;
+    },
+    onClick: mapClick,
+  });
+  geocodeMissing();
+}
+
+// Place automatiquement les voyages qui n'ont pas encore de position (1 requête / seconde).
+async function geocodeMissing() {
+  if (geocoding) return;
+  const todo = state.trips.filter((tr) => typeof tr.lat !== 'number' && !tr.geoTried && tr.destination);
+  if (!todo.length) return;
+  geocoding = true;
+  let changed = false;
+  for (const tr of todo) {
+    changed = (await locateTrip(tr)) || changed;
+    await new Promise((r) => setTimeout(r, 1100));
+  }
+  geocoding = false;
+  if (changed || todo.length) {
+    state.updatedAt = Date.now();
+    save();
+    schedulePush();
+    if (parseRoute().name === 'carte') render();
+  }
+}
+
+async function mapClick(lat, lng) {
+  if (ui.pickTrip) {
+    const tr = findById(state.trips, ui.pickTrip);
+    ui.pickTrip = null;
+    if (!tr) return;
+    Object.assign(tr, { lat, lng, geoTried: false });
+    const place = await reverseGeocode(lat, lng);
+    if (place?.country) {
+      tr.country = place.country;
+      if (!tr.emoji || tr.emoji === '✈️') tr.emoji = flagOf(place.country);
+    }
+    commit(`📍 ${tr.destination} placé sur la carte`);
+    return;
+  }
+  toast('📍 Recherche du lieu…');
+  const place = await reverseGeocode(lat, lng);
+  tripForm(null, { lat, lng, destination: place?.name || '', country: place?.country || '', emoji: flagOf(place?.country) || '✈️' });
+}
 /* ============================================================
    Collections (TikTok, Instagram, Pinterest…)
    ============================================================ */
@@ -2018,6 +2156,7 @@ function viewMenu() {
       ${sc('#/calendrier', 'calendar', 'Calendrier', 'lilac')}
       ${sc('#/priere', 'heart', 'Prière', 'lilac')}
       ${sc('#/inspirations', 'bookmark', 'Collections', 'pink')}
+      ${sc('#/carte', 'plane', 'Ma carte', 'peach')}
     </div>
     <div class="card flush mt"><ul class="list">
       <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="edit-profile"><div class="ico-box">${icon('user')}</div><div class="grow t">Mon profil</div><span style="color:var(--pink)">♥</span><span class="chev">${icon('right')}</span></button></li>
@@ -2259,6 +2398,7 @@ const ROUTES = {
   reglages: viewSettings,
   priere: viewPrayer,
   chapelet: viewRosary,
+  carte: viewMap,
   inspirations: viewInspirations,
 };
 const TAB_OF = { accueil: 'accueil', taches: 'taches', calendrier: 'calendrier' };
@@ -2275,11 +2415,16 @@ function render() {
   const { name, arg } = parseRoute();
   const splash = !state.settings.onboarded && name !== 'reglages';
   const view = $('#view');
-  view.classList.toggle('bare', splash || name === 'chapelet');
+  view.classList.toggle('bare', splash || name === 'chapelet' || name === 'carte');
+  if (name !== 'carte') {
+    unmountMap();
+    mapApi = null;
+  }
   view.innerHTML = splash ? viewSplash() : ROUTES[name](arg);
   $('#tabbar').hidden = splash;
   document.querySelectorAll('.tabbar a[data-tab]').forEach((a) => a.classList.toggle('active', a.dataset.tab === (TAB_OF[name] || 'menu')));
   if (name === 'reglages' && ui.pushDevice === 'unknown') refreshPushDevice();
+  if (name === 'carte' && !splash) setupMap();
 }
 
 /* ============================================================
@@ -2582,6 +2727,29 @@ const actions = {
   },
   'rosary-toggle-text': () => {
     ui.showPrayerText = !ui.showPrayerText;
+    render();
+  },
+
+  // Carte
+  'map-filter': (el) => {
+    ui.mapFilter = el.dataset.filter;
+    ui.mapView = null;
+    render();
+  },
+  'map-focus': (el) => {
+    const tr = findById(state.trips, el.dataset.id);
+    if (!tr) return;
+    if (mapApi?.focus(tr.id)) return;
+    ui.pickTrip = tr.id;
+    render();
+    toast(`Touche la carte pour placer ${tr.destination}`);
+  },
+  'map-pick': (el) => {
+    ui.pickTrip = el.dataset.id;
+    location.hash = '#/carte';
+  },
+  'map-pick-cancel': () => {
+    ui.pickTrip = null;
     render();
   },
 

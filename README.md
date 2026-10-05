@@ -10,6 +10,7 @@
 - **Carrière** : objectif CDI avec avancement, candidatures, entretiens, formations, projets.
 - **École** : formation et avancement de l'année, échéances, cours et projets.
 - **Voyages** : prochain voyage en photo, budget, liste avec statuts ; pour chaque voyage, billets, hôtels, checklist et documents.
+- **Ma carte** 🗺️ : tous tes voyages sur une carte interactive, avec un repère par destination et son drapeau, la couleur du statut et le trajet de l'année en pointillés. Filtres par année et « Rêves ». Touche la carte pour ajouter un voyage à cet endroit. Les lieux sont trouvés automatiquement grâce à OpenStreetMap.
 - **Objectifs** : par domaine, avec barre d'avancement.
 - **Manifestation** : « Tu fais déjà un super travail ♥ », autocollants, affirmation du jour, gratitude, vision board avec photos.
 - **Prière** ✝ : chapelet guidé grain par grain (mystères du jour, textes des prières, reprise là où tu t'étais arrêtée), neuvaines avec suivi des 9 jours, intentions de prière, série de jours.

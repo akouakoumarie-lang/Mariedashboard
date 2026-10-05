@@ -34,9 +34,10 @@ L'adresse est publique mais **les données ne le sont pas** : elles restent dans
 
 ## Données
 
-- Tout est enregistré **localement dans le navigateur** (localStorage). Rien n'est envoyé sur internet.
+- Tout est enregistré **localement dans le navigateur** (localStorage).
+- **Synchronisation téléphone ↔ ordinateur (facultative)** : avec un compte Supabase gratuit. Le guide pas à pas est dans [SUPABASE.md](SUPABASE.md). Sans synchronisation, rien n'est envoyé sur internet.
 - Au premier lancement, des **données d'exemple** sont chargées. Dans *Réglages*, « Tout effacer » permet de repartir de zéro.
-- Pour faire une sauvegarde ou passer sur un autre appareil : *Réglages → Exporter / Importer* (fichier JSON).
+- Sauvegarde manuelle : *Réglages → Exporter / Importer* (fichier JSON).
 
 ## Calcul du budget restant
 

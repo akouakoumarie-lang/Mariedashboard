@@ -1,6 +1,8 @@
 // Marie Dashboard — cockpit personnel.
 // Toutes les données sont stockées localement dans le navigateur (localStorage).
 
+import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig } from './cloud.js';
+
 const STORAGE_KEY = 'marie-dashboard:v1';
 
 /* ============================================================
@@ -307,8 +309,10 @@ function save() {
 }
 
 function commit(message) {
+  state.updatedAt = Date.now();
   save();
   render();
+  schedulePush();
   if (message) toast(message);
 }
 
@@ -1430,10 +1434,60 @@ function viewManifest() {
    Vue : Réglages
    ============================================================ */
 
+const CLOUD_LABELS = {
+  off: '',
+  'signed-out': 'Non connectée',
+  syncing: '🔄 Synchronisation…',
+  pending: '⏳ Modifications en attente…',
+  ok: '✅ Synchronisé',
+  error: '⚠️ Erreur',
+};
+
+function cloudStatusText(s = cloudStatus()) {
+  return [CLOUD_LABELS[s.state], s.message].filter(Boolean).join(' — ');
+}
+
+function cloudCard() {
+  const s = cloudStatus();
+  const cfg = cloudConfig();
+  let body;
+  if (!s.configured || ui.editCloudConfig) {
+    body = `<p class="small muted">Pour retrouver tes données sur ton téléphone et ton ordinateur, crée un projet gratuit sur Supabase (le guide pas à pas est dans le fichier <strong>SUPABASE.md</strong> du projet), puis colle ici ses deux informations.</p>
+      <form class="stack" data-form="cloud-config">
+        <label class="field"><span class="small muted">Project URL</span><input class="input" name="url" value="${esc(cfg.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" /></label>
+        <label class="field"><span class="small muted">Clé publique (anon / publishable)</span><input class="input" name="anonKey" value="${esc(cfg.anonKey)}" placeholder="eyJhbGciOi… ou sb_publishable_…" autocomplete="off" /></label>
+        <div class="head-actions"><button class="btn primary small" type="submit">Enregistrer</button>${s.configured ? '<button class="btn small ghost" type="button" data-action="cloud-edit-cancel">Annuler</button>' : ''}</div>
+      </form>`;
+  } else if (!s.email) {
+    body = `<p class="small muted">Connecte-toi avec le même compte sur chaque appareil. La première fois, choisis « Créer mon compte ».</p>
+      <form class="stack" data-form="cloud-login">
+        <input class="input" type="email" name="email" placeholder="Email" autocomplete="email" required />
+        <input class="input" type="password" name="password" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password" required />
+        <div class="head-actions">
+          <button class="btn primary small" type="submit">Se connecter</button>
+          <button class="btn small" type="button" data-action="cloud-signup">Créer mon compte</button>
+          <button class="btn small ghost" type="button" data-action="cloud-edit">Configuration</button>
+        </div>
+      </form>`;
+  } else {
+    body = `<p class="small">Connectée : <strong>${esc(s.email)}</strong></p>
+      <p class="small muted">Chaque modification est envoyée automatiquement. En cas de modifications sur deux appareils, c’est la plus récente qui l’emporte.</p>
+      <div class="head-actions">
+        <button class="btn small" data-action="cloud-sync">🔄 Synchroniser maintenant</button>
+        <button class="btn small ghost" data-action="cloud-signout">Se déconnecter</button>
+      </div>`;
+  }
+  return `<div class="card stack">
+    <h3>☁️ Synchronisation</h3>
+    <div class="small" id="cloud-status">${esc(cloudStatusText(s))}</div>
+    ${body}
+  </div>`;
+}
+
 function viewSettings() {
   const theme = document.documentElement.dataset.theme || 'auto';
   return `
-  <header class="page-head"><div><h1>⚙️ Réglages</h1><div class="sub">Tes données restent sur cet appareil.</div></div></header>
+  <header class="page-head"><div><h1>⚙️ Réglages</h1><div class="sub">${cloudStatus().email ? 'Tes données sont synchronisées entre tes appareils.' : 'Tes données restent sur cet appareil.'}</div></div></header>
   <div class="grid grid-2">
     <div class="card stack">
       <h3>Profil</h3>
@@ -1459,6 +1513,7 @@ function viewSettings() {
         <button class="btn" data-action="reset-sample">Recharger l’exemple</button>
       </div>
     </div>
+    ${cloudCard()}
   </div>`;
 }
 
@@ -1645,6 +1700,42 @@ const actions = {
     commit();
   },
 
+  // Synchronisation
+  'cloud-edit': () => {
+    ui.editCloudConfig = true;
+    render();
+  },
+  'cloud-edit-cancel': () => {
+    ui.editCloudConfig = false;
+    render();
+  },
+  'cloud-signup': async (el) => {
+    const form = el.closest('form');
+    const email = form.elements.email.value.trim();
+    const password = form.elements.password.value;
+    if (!email || password.length < 6) return toast('Email et mot de passe (6 caractères min.)');
+    el.disabled = true;
+    try {
+      const result = await signUp(email, password);
+      if (result === 'ok') render();
+      else el.disabled = false;
+      toast(result === 'confirm' ? '📧 Confirme ton email, puis connecte-toi' : 'Compte créé, synchronisation activée ☁️');
+    } catch (e) {
+      el.disabled = false;
+      toast(`⚠️ ${e.message}`);
+    }
+  },
+  'cloud-sync': async () => {
+    await sync();
+    const s = cloudStatus();
+    toast(s.state === 'error' ? `⚠️ ${s.message}` : 'Synchronisé ✅');
+  },
+  'cloud-signout': async () => {
+    if (!confirm('Se déconnecter ? Tes données restent sur cet appareil, mais ne seront plus synchronisées.')) return;
+    await signOut();
+    render();
+  },
+
   // Réglages
   theme: (el) => {
     const v = el.dataset.theme;
@@ -1733,6 +1824,25 @@ document.addEventListener('submit', (e) => {
     state.manifest.affirmations.push({ id: uid(), text });
     commit('Affirmation ajoutée 💕');
     $('form[data-form="add-affirmation"] input')?.focus();
+  } else if (form.dataset.form === 'cloud-config') {
+    const url = form.elements.url.value.trim();
+    if (url && !/^https:\/\/.+/.test(url)) return toast('L’adresse doit commencer par https://');
+    saveConfig(url, form.elements.anonKey.value);
+    ui.editCloudConfig = false;
+    render();
+    toast('Configuration enregistrée ✓');
+  } else if (form.dataset.form === 'cloud-login') {
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    signIn(form.elements.email.value.trim(), form.elements.password.value)
+      .then(() => {
+        render();
+        toast('Connectée ☁️');
+      })
+      .catch((err) => {
+        button.disabled = false;
+        toast(`⚠️ ${err.message}`);
+      });
   } else if (form.dataset.form === 'set-name') {
     state.settings.name = form.elements.name.value.trim() || 'Marie';
     commit('Profil mis à jour ✓');
@@ -1765,3 +1875,15 @@ document.addEventListener('visibilitychange', () => {
 applyTheme();
 save();
 render();
+initCloud({
+  getState: () => state,
+  replaceState: (data) => {
+    state = normalize(data);
+    save();
+    render();
+  },
+  onStatus: (s) => {
+    const el = $('#cloud-status');
+    if (el) el.textContent = cloudStatusText(s);
+  },
+});

@@ -66,7 +66,12 @@ export function planNotifications(data: any, timeZone: string, now: Date): Push[
   const items: any[] = data?.items || [];
   const routines: any[] = data?.routines || [];
   const money = data?.money || {};
+  const prayer = data?.prayer || {};
   const out: Push[] = [];
+  // Neuvaines en cours aujourd'hui et pas encore priées.
+  const novenas = (prayer.novenas || [])
+    .map((n: any) => ({ n, day: daysBetween(n.start, date) + 1 }))
+    .filter(({ n, day }: any) => day >= 1 && day <= (n.days || 9) && !n.done?.[day]);
 
   // Résumé du matin (fenêtre d'une heure pour tolérer un retard du planificateur).
   if (prefs.morning) {
@@ -95,6 +100,7 @@ export function planNotifications(data: any, timeZone: string, now: Date): Push[
         due.length ? `${due.length} chose${due.length > 1 ? 's' : ''} à faire` : 'Rien d’urgent ✨',
         bills.length ? `${bills.length} paiement${bills.length > 1 ? 's' : ''} (${bills[0].b.label} ${eur(bills[0].b.amount)})` : '',
         ...todayRoutines.map((r) => `${r.label}${r.time ? ` ${fmtTime(r.time)}` : ''}`),
+        ...novenas.map(({ n, day }: any) => `🙏 Neuvaine jour ${day}/${n.days || 9}`),
       ].filter(Boolean);
       const line2 = [`Budget : ${eur(remaining)}`, nextSalary ? `Salaire ${daysBetween(date, nextSalary) <= 0 ? "aujourd'hui 🎉" : `dans ${daysBetween(date, nextSalary)} j`}` : ''].filter(Boolean);
       out.push({
@@ -120,6 +126,14 @@ export function planNotifications(data: any, timeZone: string, now: Date): Push[
     for (const r of routines) {
       if (!(r.days || []).includes(dow) || !r.time || r.log?.[date] || !inWindow(r.time)) continue;
       out.push({ key: `routine:${r.id}:${date}`, title: `${r.emoji || '✨'} ${r.label} à ${fmtTime(r.time)}`, body: 'Tu vas tout déchirer 💪', url: './#/accueil' });
+    }
+    for (const { n, day } of novenas) {
+      if (!n.time || !inWindow(n.time)) continue;
+      out.push({ key: `novena:${n.id}:${date}`, title: `🙏 ${n.name}`, body: `Jour ${day}/${n.days || 9}${n.intention ? ` · ${n.intention}` : ''}`, url: './#/priere' });
+    }
+    const rosary = prayer.rosary || {};
+    if (rosary.daily && rosary.time && !rosary.log?.[date] && inWindow(rosary.time)) {
+      out.push({ key: `rosary:${date}`, title: '📿 L’heure du chapelet', body: 'Un moment de paix avec Marie ✨', url: './#/chapelet' });
     }
   }
   return out;

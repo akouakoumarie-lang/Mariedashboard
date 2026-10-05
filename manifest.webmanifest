@@ -1,7 +1,7 @@
 {
   "name": "Marie Dashboard",
   "short_name": "Marie",
-  "description": "Mon cockpit personnel : argent, travail, école, voyages et vie quotidienne.",
+  "description": "My life, organized. Argent, tâches, carrière, école, voyages, objectifs, prière.",
   "lang": "fr",
   "start_url": "./#/accueil",
   "display": "standalone",
@@ -24,5 +24,14 @@
       "type": "image/svg+xml"
     }
   ],
-  "scope": "./"
+  "scope": "./",
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

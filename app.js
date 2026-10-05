@@ -4,6 +4,7 @@
 
 import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig, sendTestPush } from './cloud.js';
 import { pushSupport, registerSW, currentSubscription, enablePush, disablePush, generateKeys } from './push.js';
+import { PRAYERS, MYSTERIES, MYSTERY_OF_DAY, rosarySteps, NOVENA_TEMPLATES } from './prayer-data.js';
 
 const STORAGE_KEY = 'marie-dashboard:v1';
 
@@ -160,6 +161,8 @@ const DEFAULT_AFFIRMATIONS = [
   'Je prends soin de mon corps, de mon esprit et de mon argent.',
   'Je voyage, je découvre, je vis pleinement.',
 ];
+const DEFAULT_COLLECTIONS = ['✈️ Voyages', '💄 Beauté', '👗 Mode', '🍝 Recettes', '🏠 Déco', '💪 Sport', '💼 Business'];
+
 const STICKERS = [
   ['Organisée', '-3deg'],
   ['Ambitieuse', '2deg'],
@@ -192,6 +195,15 @@ function emptyState() {
       affirmations: DEFAULT_AFFIRMATIONS.map((text) => ({ id: uid(), text })),
       dreams: [],
       gratitude: {},
+    },
+    prayer: {
+      rosary: { log: {}, current: null, daily: false, time: '' },
+      novenas: [],
+      intentions: [],
+    },
+    inspirations: {
+      collections: DEFAULT_COLLECTIONS.slice(),
+      items: [],
     },
   };
 }
@@ -279,6 +291,15 @@ function sampleState() {
     { id: uid(), emoji: '🇧🇷', title: 'Brésil', category: 'voyages', progress: 20, date: '', notes: '', image: '', manifested: false },
     { id: uid(), emoji: '🏠', title: 'Nouveau logement', category: 'maison', progress: 15, date: '', notes: '', image: '', manifested: false },
   ];
+  s.prayer.rosary.daily = true;
+  s.prayer.rosary.time = '21:30';
+  s.prayer.novenas = [
+    { id: uid(), name: 'Neuvaine à Marie qui défait les nœuds', intention: 'Pour mon CDI et ma famille', start: addDays(t, -3), days: 9, time: '21:00', text: '', link: '', done: { 1: addDays(t, -3), 2: addDays(t, -2), 3: addDays(t, -1) } },
+  ];
+  s.prayer.intentions = [
+    { id: uid(), text: 'Pour ma famille', answered: false, date: addDays(t, -10) },
+    { id: uid(), text: 'Réussir mon année de Master', answered: false, date: addDays(t, -20) },
+  ];
   return s;
 }
 
@@ -298,6 +319,9 @@ function normalize(data) {
   out.items = out.items.map((i) => ({ time: '', status: '', notes: '', ...i }));
   out.routines = out.routines.map((r) => ({ time: '', log: {}, days: [], ...r }));
   out.trips = out.trips.map((tr) => ({ emoji: '✈️', image: '', bookings: [], checklist: [], notes: '', ...tr, status: LEGACY_TRIP_STATUS[tr.status] || tr.status || 'À planifier' }));
+  out.prayer = { ...base.prayer, ...(data.prayer || {}) };
+  out.prayer.rosary = { ...base.prayer.rosary, ...(data.prayer?.rosary || {}) };
+  out.inspirations = { ...base.inspirations, ...(data.inspirations || {}) };
   out.manifest.dreams = out.manifest.dreams.map((d) => ({ progress: d.manifested ? 100 : 0, ...d, category: LEGACY_DREAM_CATEGORY[d.category] || d.category || 'moi' }));
   return out;
 }
@@ -328,6 +352,8 @@ const ui = {
   affShift: 0,
   editCloudConfig: false,
   pushDevice: 'unknown',
+  inspFilter: 'all',
+  showPrayerText: true,
 };
 
 function save() {
@@ -1091,6 +1117,21 @@ function viewHome() {
       <div class="grow tap" data-action="edit-routine" data-id="${r.id}"><div class="t">${esc(r.label)}</div><div class="s">${esc(r.emoji)} ${r.time ? esc(fmtTime(r.time)) : 'Aujourd’hui'}</div></div>
       <input type="checkbox" class="circle" data-action="toggle-routine" data-id="${r.id}" data-date="${t}" ${done ? 'checked' : ''} aria-label="Fait" /></li>`);
   }
+  if (state.prayer.rosary.daily) {
+    const prayed = !!state.prayer.rosary.log[t];
+    rows.push(`<li class="row tap ${prayed ? 'done' : ''}" data-action="goto" data-href="#/chapelet">
+      <div class="ico-box lilac">📿</div>
+      <div class="grow"><div class="t">Chapelet</div><div class="s">${esc(MYSTERIES[MYSTERY_OF_DAY[now.getDay()]].label)}${state.prayer.rosary.time ? ` · ${esc(fmtTime(state.prayer.rosary.time))}` : ''}</div></div>
+      ${prayed ? '<span class="badge good">✓</span>' : `<span class="chev">${icon('right')}</span>`}</li>`);
+  }
+  for (const n of activeNovenas()) {
+    const day = novenaDay(n);
+    const done = !!n.done?.[day];
+    rows.push(`<li class="row ${done ? 'done' : ''}">
+      <div class="ico-box lilac">🙏</div>
+      <div class="grow tap" data-action="goto" data-href="#/priere"><div class="t">${esc(n.name)}</div><div class="s">Jour ${day}/${n.days}${n.time ? ` · ${esc(fmtTime(n.time))}` : ''}</div></div>
+      <input type="checkbox" class="circle" data-action="novena-day" data-id="${n.id}" data-day="${day}" ${done ? 'checked' : ''} aria-label="Prié" /></li>`);
+  }
   if (!grat) {
     rows.push(`<li class="row tap" data-action="gratitude">
       <div class="ico-box pink">${icon('heart')}</div>
@@ -1515,6 +1556,11 @@ function viewTrip(id) {
         .join('')}</ul>
         <form class="inline-add" data-form="add-check" data-trip="${tr.id}" style="padding-bottom:12px"><input class="input" name="text" placeholder="Ajouter à la checklist…" autocomplete="off" /><button class="btn sm pink" type="submit">Ajouter</button></form>
       </div>
+      ${secHead('🎵 Mes TikToks pour ce voyage', `data-action="add-insp" data-trip="${tr.id}" data-collection="✈️ Voyages"`, 'Ajouter')}
+      ${(() => {
+        const its = state.inspirations.items.filter((it) => it.tripId === tr.id);
+        return its.length ? `<div class="insp-grid">${its.map(inspCard).join('')}</div>` : `<div class="card">${emptyMsg('Restos, spots photo, hôtels… garde tes TikToks ici.')}</div>`;
+      })()}
       ${tr.notes ? `${secHead('Documents & notes')}<div class="card small" style="white-space:pre-wrap">${esc(tr.notes)}</div>` : ''}
       <div class="add-pill"><button class="btn soft" data-action="edit-trip" data-id="${tr.id}">${icon('pencil')} Modifier le voyage</button></div>
     </section>
@@ -1643,6 +1689,303 @@ function viewDocuments() {
   </section>`;
 }
 
+
+/* ============================================================
+   Prière : chapelet, neuvaines, intentions
+   ============================================================ */
+
+const novenaDay = (n, date = todayISO()) => daysBetween(n.start, date) + 1;
+const novenaDoneCount = (n) => Object.keys(n.done || {}).length;
+function novenaState(n) {
+  const day = novenaDay(n);
+  if (novenaDoneCount(n) >= n.days) return 'finished';
+  if (day < 1) return 'upcoming';
+  if (day > n.days) return 'ended';
+  return 'active';
+}
+const activeNovenas = () => state.prayer.novenas.filter((n) => novenaState(n) === 'active');
+
+function rosaryStreak() {
+  const log = state.prayer.rosary.log;
+  let d = todayISO();
+  if (!log[d]) d = addDays(d, -1);
+  let n = 0;
+  while (log[d]) {
+    n++;
+    d = addDays(d, -1);
+  }
+  return n;
+}
+
+function novenaForm(n) {
+  openForm({
+    title: n ? 'Modifier la neuvaine' : 'Nouvelle neuvaine 🙏',
+    fields: [
+      { name: 'name', label: 'Nom de la neuvaine', placeholder: 'Écris-le, ou choisis ci-dessous' },
+      { name: 'template', label: 'Ou choisis dans la liste', type: 'select', options: [['', '—'], ...NOVENA_TEMPLATES.map((x) => [x, x])] },
+      { name: 'intention', label: 'Mon intention', type: 'textarea', placeholder: 'Pour qui, pour quoi je prie…' },
+      { name: 'start', label: 'Premier jour', type: 'date', required: true },
+      { name: 'days', label: 'Nombre de jours', type: 'number' },
+      { name: 'time', label: 'Heure du rappel (notifications)', type: 'time' },
+      { name: 'text', label: 'Texte de la prière (à coller)', type: 'textarea', placeholder: 'Colle ici la prière de la neuvaine, pour l’avoir sous la main.' },
+      { name: 'link', label: 'Lien vers le texte (optionnel)', type: 'url', placeholder: 'https://…' },
+    ],
+    values: n || { start: todayISO(), days: 9, time: '21:00' },
+    onSubmit: (d) => {
+      d.name = d.name || d.template || 'Neuvaine';
+      delete d.template;
+      d.days = clamp(Math.round(d.days) || 9, 1, 54);
+      if (n) Object.assign(n, d);
+      else state.prayer.novenas.push({ id: uid(), done: {}, ...d });
+      commit('Neuvaine enregistrée 🙏');
+    },
+    onDelete: n
+      ? () => {
+          state.prayer.novenas = state.prayer.novenas.filter((x) => x !== n);
+          commit('Neuvaine supprimée');
+        }
+      : null,
+  });
+}
+
+function novenaCard(n) {
+  const st = novenaState(n);
+  const today = novenaDay(n);
+  const dots = Array.from({ length: n.days }, (_, i) => {
+    const k = i + 1;
+    const cls = n.done?.[k] ? 'on' : k === today ? 'today' : k < today ? 'missed' : '';
+    return `<button class="nov-dot ${cls}" data-action="novena-day" data-id="${n.id}" data-day="${k}" aria-label="Jour ${k}">${k}</button>`;
+  }).join('');
+  const missed = st === 'active' || st === 'ended' ? Array.from({ length: Math.min(today - 1, n.days) }, (_, i) => i + 1).filter((k) => !n.done?.[k]).length : 0;
+  const status = {
+    finished: '<span class="status pink">✨ Neuvaine terminée</span>',
+    upcoming: `<span class="status info">Commence ${esc(dayLabel(n.start).toLowerCase())}</span>`,
+    ended: `<span class="status muted">Terminée le ${esc(fmtDate(addDays(n.start, n.days - 1)))}</span>`,
+    active: `<span class="status pink">Jour ${today}/${n.days}</span>`,
+  }[st];
+  return `<div class="card stack">
+    <div class="between"><div class="grow tap" data-action="edit-novena" data-id="${n.id}"><div class="t" style="font-weight:700">${esc(n.name)}</div>${n.intention ? `<div class="small muted">🕊️ ${esc(n.intention)}</div>` : ''}</div>${status}</div>
+    <div class="nov-dots">${dots}</div>
+    ${missed ? `<div class="small muted">${plural(missed, 'jour manqué', 'jours manqués')} — touche un rond pour le rattraper.</div>` : ''}
+    <div class="btn-row">
+      ${st === 'active' ? (n.done?.[today] ? '<span class="badge good">Prié aujourd’hui ✓</span>' : `<button class="btn sm pink" data-action="novena-day" data-id="${n.id}" data-day="${today}">J’ai prié aujourd’hui 🙏</button>`) : ''}
+      ${n.text ? `<button class="btn sm soft" data-action="novena-text" data-id="${n.id}">Lire la prière</button>` : ''}
+      ${n.link ? `<a class="btn sm ghost" href="${esc(n.link)}" target="_blank" rel="noopener">Ouvrir le lien ↗</a>` : ''}
+    </div>
+  </div>`;
+}
+
+function viewPrayer() {
+  const t = todayISO();
+  const r = state.prayer.rosary;
+  const set = r.current?.set || MYSTERY_OF_DAY[new Date().getDay()];
+  const steps = rosarySteps(set);
+  const cur = r.current && r.current.step < steps.length ? steps[r.current.step] : null;
+  const month = monthKey();
+  const monthCount = sum(Object.entries(r.log).filter(([d]) => d.startsWith(month)), ([, v]) => v);
+  const streak = rosaryStreak();
+  const last14 = Array.from({ length: 14 }, (_, i) => addDays(t, i - 13));
+  const novenas = state.prayer.novenas.slice().sort((a, b) => ['active', 'upcoming', 'ended', 'finished'].indexOf(novenaState(a)) - ['active', 'upcoming', 'ended', 'finished'].indexOf(novenaState(b)));
+  const intentions = state.prayer.intentions.slice().sort((a, b) => Number(a.answered) - Number(b.answered));
+
+  return `
+  <header class="dark-head prayer-head">
+    <div class="head-row"><div><h1 class="title">Prière <span style="color:var(--pink-2)">✝</span></h1><div class="subtitle">Un temps rien qu’à toi et Dieu.</div></div>${backBtn('#/menu', true)}</div>
+    <a class="hero-card" href="#/chapelet" style="display:block">
+      <div class="row1"><div class="ico-box round pink" style="font-size:22px">📿</div><div><div class="h">Chapelet · ${esc(MYSTERIES[set].label)}</div><div class="s">${cur ? `En cours : ${cur.decade ? `dizaine ${cur.decade}/5` : 'introduction'} — touche pour reprendre` : r.log[t] ? 'Déjà prié aujourd’hui ✨ — encore un ?' : 'Touche pour commencer'}</div></div></div>
+      ${cur ? progressBar((r.current.step / steps.length) * 100, 'on-ink') : ''}
+    </a>
+  </header>
+  <div class="sheet">
+    <section class="section">
+      <div class="tiles" style="padding:6px 0 0">
+        <div class="tile"><div class="label">Ce mois-ci</div><div class="big">${plural(monthCount, 'chapelet')}</div><div class="small">📿 prié${monthCount > 1 ? 's' : ''}</div></div>
+        <div class="tile peach"><div class="label">Série</div><div class="big">${plural(streak, 'jour')}</div><div class="small">${streak ? 'd’affilée, bravo 🔥' : 'commence aujourd’hui'}</div></div>
+      </div>
+      <div class="card mt"><div class="small muted" style="margin-bottom:8px">Les 14 derniers jours</div><div class="days14">${last14.map((d) => `<span class="${r.log[d] ? 'on' : ''} ${d === t ? 'today' : ''}" title="${esc(fmtDate(d))}">${parseISO(d).getDate()}</span>`).join('')}</div>
+        <form class="between mt" data-form="rosary-prefs" style="flex-wrap:wrap">
+          <label class="field-check small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" class="circle" name="daily" ${r.daily ? 'checked' : ''} /> Chapelet chaque jour</label>
+          <span class="btn-row" style="align-items:center"><input class="input" type="time" name="time" value="${esc(r.time || '')}" style="width:auto;padding:6px 10px" aria-label="Heure du rappel" /><button class="btn sm soft" type="submit">OK</button></span>
+        </form>
+      </div>
+
+      ${secHead('🙏 Mes neuvaines', 'data-action="add-novena"', 'Ajouter')}
+      <div class="stack">${novenas.map(novenaCard).join('') || `<div class="card">${emptyMsg('Commence une neuvaine : 9 jours de prière pour une intention.')}</div>`}</div>
+
+      ${secHead('🕊️ Mes intentions')}
+      <div class="card flush">
+        <ul class="list">${intentions
+          .map((it) => `<li class="row ${it.answered ? 'done' : ''}"><input type="checkbox" class="circle" data-action="toggle-intention" data-id="${it.id}" ${it.answered ? 'checked' : ''} aria-label="Exaucée" /><div class="grow"><div class="t">${esc(it.text)}</div><div class="s">${it.answered ? '✨ Exaucée — merci Seigneur' : `depuis le ${esc(fmtDate(it.date))}`}</div></div><button class="icon-btn sm" data-action="del-intention" data-id="${it.id}" aria-label="Retirer">${icon('x')}</button></li>`)
+          .join('')}</ul>
+        <form class="inline-add" data-form="add-intention" style="padding-bottom:12px"><input class="input" name="text" placeholder="Je confie à Dieu…" autocomplete="off" /><button class="btn sm pink" type="submit">Ajouter</button></form>
+      </div>
+
+      ${secHead('📖 Mes prières')}
+      <div class="card flush prayers">${['croix', 'pater', 'ave', 'gloria', 'credo', 'fatima', 'salve']
+        .map((k) => `<details><summary>${esc(PRAYERS[k].title)}</summary><p>${esc(PRAYERS[k].text)}</p></details>`)
+        .join('')}</div>
+    </section>
+  </div>`;
+}
+
+function viewRosary() {
+  const r = state.prayer.rosary;
+  const set = r.current?.set || MYSTERY_OF_DAY[new Date().getDay()];
+  const steps = rosarySteps(set);
+  const i = clamp(r.current?.step || 0, 0, steps.length - 1);
+  const s = steps[i];
+  const decadeBeads = s.decade
+    ? Array.from({ length: 10 }, (_, k) => `<i class="${s.bead === 'small' && k < s.n ? 'on' : ''} ${s.bead === 'small' && k + 1 === s.n ? 'now' : ''} ${s.bead === 'none' && steps[i].prayers.includes('gloria') ? 'on' : ''}"></i>`).join('')
+    : s.of === 3
+      ? Array.from({ length: 3 }, (_, k) => `<i class="${k < s.n ? 'on' : ''} ${k + 1 === s.n ? 'now' : ''}"></i>`).join('')
+      : '';
+  const decades = Array.from({ length: 5 }, (_, d) => `<span class="${s.decade > d + 1 || (!s.decade && i > 6) ? 'on' : ''} ${s.decade === d + 1 ? 'now' : ''}"></span>`).join('');
+  const texts = s.prayers.map((k) => `<p><strong>${esc(PRAYERS[k].title)}</strong><br>${esc(PRAYERS[k].text)}</p>`).join('');
+
+  return `
+  <section class="rosary">
+    <div class="between"><a class="icon-btn ghost" href="#/priere" aria-label="Retour">${icon('left')}</a><span class="small" style="opacity:.8">${esc(MYSTERIES[set].label)}</span><button class="icon-btn ghost" data-action="rosary-reset" aria-label="Recommencer">↺</button></div>
+    <div class="chips">${Object.entries(MYSTERIES)
+      .map(([k, m]) => `<button class="chip ${k === set ? 'active' : ''}" data-action="rosary-set" data-set="${k}">${esc(m.adj[0].toUpperCase() + m.adj.slice(1))}</button>`)
+      .join('')}</div>
+    <div class="decades">${decades}</div>
+    <button class="rosary-tap" data-action="rosary-next" aria-label="Grain suivant">
+      ${s.mystery ? `<div class="mystery">✦ ${esc(s.mystery)}</div>` : ''}
+      <div class="step-label">${esc(s.label)}</div>
+      ${s.n ? `<div class="count">${s.n}<span>/${s.of}</span></div>` : `<div class="count" style="font-size:44px">${s.bead === 'cross' ? '✝' : s.bead === 'big' ? '●' : '✦'}</div>`}
+      ${decadeBeads ? `<div class="beads">${decadeBeads}</div>` : ''}
+      <div class="tap-hint">Touche pour avancer</div>
+    </button>
+    <div class="between" style="margin-top:14px">
+      <button class="btn ghost sm" style="color:#fff;border-color:rgba(255,255,255,.3)" data-action="rosary-prev" ${i === 0 ? 'disabled' : ''}>◀ Retour</button>
+      <span class="small" style="opacity:.75">${i + 1} / ${steps.length}</span>
+      <button class="btn ghost sm" style="color:#fff;border-color:rgba(255,255,255,.3)" data-action="rosary-toggle-text">${ui.showPrayerText ? 'Masquer' : 'Afficher'} le texte</button>
+    </div>
+    ${ui.showPrayerText && texts ? `<div class="prayer-text">${texts}</div>` : ''}
+  </section>`;
+}
+
+/* ============================================================
+   Collections (TikTok, Instagram, Pinterest…)
+   ============================================================ */
+
+const URL_RE = /https?:\/\/[^\s<>"']+/i;
+function platformOf(url) {
+  if (/tiktok\.com/i.test(url)) return { name: 'TikTok', emoji: '🎵' };
+  if (/instagram\.com/i.test(url)) return { name: 'Instagram', emoji: '📸' };
+  if (/pinterest\.|pin\.it/i.test(url)) return { name: 'Pinterest', emoji: '📌' };
+  if (/youtu\.?be/i.test(url)) return { name: 'YouTube', emoji: '▶️' };
+  return { name: 'Lien', emoji: '🔗' };
+}
+
+// Aperçu (titre, miniature) via oEmbed quand le site le permet.
+async function fetchPreview(url) {
+  let api = null;
+  if (/tiktok\.com/i.test(url)) api = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+  else if (/youtu\.?be/i.test(url)) api = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(url)}`;
+  if (!api) return {};
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(api, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!r.ok) return {};
+    const j = await r.json();
+    return { title: j.title || '', thumb: j.thumbnail_url || '', author: j.author_name || '' };
+  } catch {
+    return {};
+  }
+}
+
+function inspirationForm(item, preset = {}) {
+  const cols = state.inspirations.collections;
+  openForm({
+    title: item ? 'Modifier' : 'Enregistrer un TikTok ✦',
+    fields: [
+      { name: 'url', label: 'Lien (TikTok, Instagram, Pinterest, YouTube…)', type: 'url', required: true, placeholder: 'https://www.tiktok.com/@…/video/…' },
+      { name: 'collection', label: 'Collection', type: 'select', options: cols.map((c) => [c, c]) },
+      { name: 'newCollection', label: 'Ou nouvelle collection', placeholder: '🌴 Bali, 💅 Ongles…' },
+      { name: 'tripId', label: 'Pour quel voyage ? (optionnel)', type: 'select', options: [['', '—'], ...state.trips.map((tr) => [tr.id, `${tr.emoji || '✈️'} ${tr.destination}`])] },
+      { name: 'title', label: 'Titre', placeholder: 'Rempli automatiquement si possible' },
+      { name: 'note', label: 'Note', type: 'textarea', placeholder: 'Adresse du resto, prix, idée de tenue…' },
+    ],
+    values: item || { collection: preset.collection || cols[0], tripId: preset.tripId || '', url: preset.url || '', title: preset.title || '' },
+    onSubmit: async (d) => {
+      const url = (d.url.match(URL_RE) || [d.url])[0];
+      const collection = d.newCollection || d.collection;
+      if (d.newCollection && !cols.includes(d.newCollection)) cols.push(d.newCollection);
+      const data = { url, collection, tripId: d.tripId, title: d.title, note: d.note };
+      const target = item || { id: uid(), addedAt: todayISO(), thumb: '', author: '', tried: false };
+      const urlChanged = target.url !== url;
+      Object.assign(target, data);
+      if (!item) state.inspirations.items.unshift(target);
+      commit(item ? 'Modifié ✓' : 'Enregistré dans ta collection ✦');
+      if (urlChanged || !target.thumb) {
+        const pv = await fetchPreview(url);
+        if (pv.thumb || pv.title) {
+          target.thumb = pv.thumb || target.thumb;
+          target.author = pv.author || target.author;
+          if (!target.title) target.title = pv.title;
+          commit();
+        }
+      }
+    },
+    onDelete: item
+      ? () => {
+          state.inspirations.items = state.inspirations.items.filter((x) => x !== item);
+          commit('Retiré de la collection');
+        }
+      : null,
+  });
+}
+
+function inspCard(it) {
+  const pf = platformOf(it.url);
+  const trip = it.tripId ? findById(state.trips, it.tripId) : null;
+  return `<div class="insp ${it.tried ? 'tried' : ''}">
+    <a class="insp-thumb" href="${esc(it.url)}" target="_blank" rel="noopener">
+      ${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />` : ''}
+      <span class="insp-pf">${pf.emoji} ${pf.name}</span>
+      ${it.tried ? '<span class="insp-tried">✓ Testé</span>' : ''}
+    </a>
+    <div class="insp-body">
+      <div class="t">${esc(it.title || it.note || pf.name)}</div>
+      <div class="s">${trip ? `${esc(trip.emoji || '✈️')} ${esc(trip.destination)}` : esc(it.collection)}${it.author ? ` · @${esc(it.author)}` : ''}</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="icon-btn sm" data-action="toggle-tried" data-id="${it.id}" aria-label="Testé">${it.tried ? '↺' : '✓'}</button>
+        <button class="icon-btn sm" data-action="edit-insp" data-id="${it.id}" aria-label="Modifier">${icon('pencil')}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewInspirations() {
+  const { collections, items } = state.inspirations;
+  const f = ui.inspFilter;
+  const list = items.filter((it) => f === 'all' || it.collection === f);
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Collections</h1><div class="subtitle">Tes TikToks & inspis, rangés par thème.</div></div>${backBtn('#/menu')}</div>
+  </header>
+  <div class="chips">
+    <button class="chip ${f === 'all' ? 'active' : ''}" data-action="insp-filter" data-filter="all">Tout · ${items.length}</button>
+    ${collections.map((c) => `<button class="chip ${f === c ? 'active' : ''}" data-action="insp-filter" data-filter="${esc(c)}">${esc(c)} · ${items.filter((it) => it.collection === c).length}</button>`).join('')}
+  </div>
+  <section class="section">
+    <div class="btn-row" style="margin:8px 0 14px">
+      <button class="btn pink" data-action="paste-insp">📋 Coller un lien</button>
+      <button class="btn soft" data-action="add-insp" data-collection="${f === 'all' ? '' : esc(f)}">${icon('plus')} Ajouter</button>
+    </div>
+    <div class="insp-grid">${list.map(inspCard).join('')}</div>
+    ${list.length ? '' : `<div class="card stack small">
+      <strong>Comment enregistrer un TikTok ?</strong>
+      <div>📱 <strong>Android</strong> : installe l’app sur l’écran d’accueil, puis dans TikTok → <em>Partager</em> → <strong>Marie</strong>. Le lien arrive tout seul ici.</div>
+      <div>🍎 <strong>iPhone</strong> : dans TikTok → <em>Partager</em> → <em>Copier le lien</em>, puis ici → <strong>📋 Coller un lien</strong>.</div>
+      <div class="muted">TikTok ne permet pas aux autres apps de lire tes collections : c’est pour ça qu’on ajoute les liens un par un.</div>
+    </div>`}
+  </section>`;
+}
+
 /* ============================================================
    Menu & réglages
    ============================================================ */
@@ -1673,6 +2016,8 @@ function viewMenu() {
       ${sc('#/manifestation', 'sparkles', 'Manifester', 'pink')}
       ${sc('#/perso', 'heart', 'Perso', 'peach')}
       ${sc('#/calendrier', 'calendar', 'Calendrier', 'lilac')}
+      ${sc('#/priere', 'heart', 'Prière', 'lilac')}
+      ${sc('#/inspirations', 'bookmark', 'Collections', 'pink')}
     </div>
     <div class="card flush mt"><ul class="list">
       <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="edit-profile"><div class="ico-box">${icon('user')}</div><div class="grow t">Mon profil</div><span style="color:var(--pink)">♥</span><span class="chev">${icon('right')}</span></button></li>
@@ -1912,6 +2257,9 @@ const ROUTES = {
   perso: viewPerso,
   documents: viewDocuments,
   reglages: viewSettings,
+  priere: viewPrayer,
+  chapelet: viewRosary,
+  inspirations: viewInspirations,
 };
 const TAB_OF = { accueil: 'accueil', taches: 'taches', calendrier: 'calendrier' };
 // Anciennes adresses (version précédente de l'app).
@@ -1927,7 +2275,7 @@ function render() {
   const { name, arg } = parseRoute();
   const splash = !state.settings.onboarded && name !== 'reglages';
   const view = $('#view');
-  view.classList.toggle('bare', splash);
+  view.classList.toggle('bare', splash || name === 'chapelet');
   view.innerHTML = splash ? viewSplash() : ROUTES[name](arg);
   $('#tabbar').hidden = splash;
   document.querySelectorAll('.tabbar a[data-tab]').forEach((a) => a.classList.toggle('active', a.dataset.tab === (TAB_OF[name] || 'menu')));
@@ -2174,6 +2522,94 @@ const actions = {
     commit();
   },
 
+  // Prière
+  'add-novena': () => novenaForm(),
+  'edit-novena': (el) => novenaForm(findById(state.prayer.novenas, el.dataset.id)),
+  'novena-day': (el) => {
+    const n = findById(state.prayer.novenas, el.dataset.id);
+    const k = Number(el.dataset.day);
+    if (!n || k < 1 || k > n.days) return;
+    if (k > novenaDay(n)) return toast('Ce jour n’est pas encore arrivé 🙂');
+    n.done = n.done || {};
+    if (n.done[k]) delete n.done[k];
+    else n.done[k] = todayISO();
+    commit(n.done[k] ? (novenaDoneCount(n) >= n.days ? '✨ Neuvaine terminée ! Que Dieu te bénisse' : `Jour ${k} prié 🙏`) : null);
+  },
+  'novena-text': (el) => {
+    const n = findById(state.prayer.novenas, el.dataset.id);
+    openSheet(n.name, `<div class="prayer-text" style="color:var(--text);background:var(--surface-2)"><p style="white-space:pre-wrap">${esc(n.text)}</p></div>`);
+  },
+  'toggle-intention': (el) => {
+    const it = findById(state.prayer.intentions, el.dataset.id);
+    it.answered = !it.answered;
+    commit(it.answered ? 'Exaucée ✨ Merci Seigneur' : null);
+  },
+  'del-intention': (el) => {
+    state.prayer.intentions = state.prayer.intentions.filter((x) => x.id !== el.dataset.id);
+    commit();
+  },
+  'rosary-next': () => {
+    const r = state.prayer.rosary;
+    const set = r.current?.set || MYSTERY_OF_DAY[new Date().getDay()];
+    const total = rosarySteps(set).length;
+    const step = (r.current?.step || 0) + 1;
+    if (step >= total) {
+      const t = todayISO();
+      r.log[t] = (r.log[t] || 0) + 1;
+      r.current = null;
+      location.hash = '#/priere';
+      commit('📿 Chapelet terminé ✨ Que Dieu te bénisse');
+      return;
+    }
+    r.current = { set, step, date: todayISO() };
+    commit();
+  },
+  'rosary-prev': () => {
+    const r = state.prayer.rosary;
+    if (!r.current) return;
+    r.current.step = Math.max(0, r.current.step - 1);
+    commit();
+  },
+  'rosary-set': (el) => {
+    const r = state.prayer.rosary;
+    r.current = { set: el.dataset.set, step: r.current?.step || 0, date: todayISO() };
+    commit();
+  },
+  'rosary-reset': () => {
+    if (state.prayer.rosary.current && !confirm('Recommencer le chapelet depuis le début ?')) return;
+    state.prayer.rosary.current = null;
+    commit();
+  },
+  'rosary-toggle-text': () => {
+    ui.showPrayerText = !ui.showPrayerText;
+    render();
+  },
+
+  // Collections
+  'add-insp': (el) => {
+    closeDialog();
+    inspirationForm(null, { tripId: el.dataset.trip, collection: el.dataset.collection });
+  },
+  'edit-insp': (el) => inspirationForm(findById(state.inspirations.items, el.dataset.id)),
+  'toggle-tried': (el) => {
+    const it = findById(state.inspirations.items, el.dataset.id);
+    it.tried = !it.tried;
+    commit(it.tried ? 'Testé ✓' : null);
+  },
+  'insp-filter': (el) => {
+    ui.inspFilter = el.dataset.filter;
+    render();
+  },
+  'paste-insp': async () => {
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {}
+    const url = (text.match(URL_RE) || [''])[0];
+    if (!url) toast('Copie d’abord le lien dans TikTok (Partager → Copier le lien)');
+    inspirationForm(null, { url, collection: ui.inspFilter === 'all' ? undefined : ui.inspFilter });
+  },
+
   // Profil & réglages
   'edit-profile': () => profileForm(),
   theme: (el) => {
@@ -2304,6 +2740,12 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (parseRoute().name === 'chapelet' && !$('#modal').open && (e.key === 'ArrowRight' || (e.key === ' ' && e.target === document.body))) {
+    e.preventDefault();
+    actions['rosary-next']();
+    return;
+  }
+  if (parseRoute().name === 'chapelet' && e.key === 'ArrowLeft') return actions['rosary-prev']();
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role="button"][data-action]')) {
     e.preventDefault();
     actions[e.target.dataset.action]?.(e.target, e);
@@ -2352,6 +2794,15 @@ document.addEventListener('submit', (e) => {
     state.manifest.affirmations.push({ id: uid(), text });
     commit('Affirmation ajoutée 💕');
     $('form[data-form="add-affirmation"] input')?.focus();
+  } else if (kind === 'add-intention') {
+    const text = form.elements.text.value.trim();
+    if (!text) return;
+    state.prayer.intentions.unshift({ id: uid(), text, answered: false, date: todayISO() });
+    commit('Intention confiée 🕊️');
+  } else if (kind === 'rosary-prefs') {
+    state.prayer.rosary.daily = form.elements.daily.checked;
+    state.prayer.rosary.time = form.elements.time.value;
+    commit('Enregistré 📿');
   } else if (kind === 'push-prefs') {
     state.settings.push.prefs = {
       morning: form.elements.morning.value,
@@ -2412,6 +2863,18 @@ applyTheme();
 save();
 render();
 if (pushSupport().supported) registerSW();
+
+// Lien partagé depuis TikTok & co (Android : menu Partager → Marie).
+(() => {
+  const params = new URLSearchParams(location.search);
+  const shared = [params.get('url'), params.get('text'), params.get('title')].filter(Boolean).join(' ');
+  if (!shared) return;
+  history.replaceState(null, '', location.pathname + '#/inspirations');
+  const url = (shared.match(URL_RE) || [''])[0];
+  state.settings.onboarded = true;
+  render();
+  if (url) inspirationForm(null, { url, title: params.get('title') || '' });
+})();
 initCloud({
   getState: () => state,
   replaceState: (data) => {

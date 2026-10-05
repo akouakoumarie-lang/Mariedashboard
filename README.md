@@ -12,6 +12,8 @@
 - **Voyages** : prochain voyage en photo, budget, liste avec statuts ; pour chaque voyage, billets, hôtels, checklist et documents.
 - **Objectifs** : par domaine, avec barre d'avancement.
 - **Manifestation** : « Tu fais déjà un super travail ♥ », autocollants, affirmation du jour, gratitude, vision board avec photos.
+- **Prière** ✝ : chapelet guidé grain par grain (mystères du jour, textes des prières, reprise là où tu t'étais arrêtée), neuvaines avec suivi des 9 jours, intentions de prière, série de jours.
+- **Collections** 🎵 : tes TikToks, Instagram, Pinterest et YouTube rangés par thème (Voyages, Beauté, Recettes…) et rattachés à tes voyages. Sur Android, utilise *Partager → Marie* depuis TikTok ; sur iPhone, *Copier le lien* puis *📋 Coller un lien*.
 - **Menu** : profil avec photo, raccourcis vers tous les espaces, documents, paramètres, synchronisation.
 
 Le bouton **+** au centre ajoute n'importe quoi : tâche, dépense, revenu, charge, objectif, voyage, routine, gratitude, document.

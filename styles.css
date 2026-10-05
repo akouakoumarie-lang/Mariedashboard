@@ -725,3 +725,79 @@ input[type="range"] { width: 100%; accent-color: var(--pink); }
 .stack > * + * { margin-top: 10px; }
 .mt { margin-top: 12px; }
 .hide-amount { filter: blur(9px); user-select: none; }
+
+/* ---------- Prière ---------- */
+.prayer-head::before { opacity: .25; }
+.days14 { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+.days14 span { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: var(--muted); background: var(--surface-2); }
+.days14 span.on { background: var(--pink); color: #fff; }
+.days14 span.today { box-shadow: 0 0 0 2px var(--lilac-strong); }
+.nov-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.nov-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; padding: 0; }
+.nov-dot.on { background: var(--pink); border-color: var(--pink); color: #fff; }
+.nov-dot.today { border-color: var(--pink); color: var(--pink); }
+.nov-dot.missed { border-style: dashed; }
+.prayers details { border-top: 1px solid var(--border); }
+.prayers details:first-child { border-top: 0; }
+.prayers summary { padding: 14px 2px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+.prayers summary::after { content: "✦"; color: var(--pink); }
+.prayers details[open] summary::after { content: "–"; }
+.prayers p { margin: 0 2px 14px; font-family: var(--serif); font-size: 15.5px; line-height: 1.6; }
+
+.rosary {
+  position: relative;
+  min-height: 100vh;
+  padding: 22px 18px calc(110px + env(safe-area-inset-bottom));
+  color: #fff;
+  background: radial-gradient(circle at 50% 30%, rgba(255, 46, 138, .35), transparent 60%), linear-gradient(rgba(23, 17, 26, .7), rgba(23, 17, 26, .7)), url("leopard-pink.svg") 0 0 / 220px, #17111a;
+}
+@media (min-width: 560px) { .rosary { min-height: calc(100vh - 48px); } }
+.rosary .chip { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .2); }
+.rosary .chip.active { background: var(--pink); border-color: var(--pink); }
+.decades { display: flex; justify-content: center; gap: 10px; margin: 10px 0 16px; }
+.decades span { width: 34px; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .2); }
+.decades span.on { background: var(--pink-2); }
+.decades span.now { background: #fff; box-shadow: 0 0 10px rgba(255, 126, 182, .8); }
+.rosary-tap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 330px;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 32px;
+  background: rgba(255, 255, 255, .07);
+  color: #fff;
+  cursor: pointer;
+  padding: 24px 16px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .08s;
+}
+.rosary-tap:active { transform: scale(.98); }
+.rosary .mystery { font-family: var(--serif); font-style: italic; font-size: 19px; color: #ffc2dc; text-align: center; }
+.rosary .step-label { font-weight: 700; font-size: 17px; text-align: center; }
+.rosary .count { font-family: var(--serif); font-size: 64px; font-weight: 700; line-height: 1; }
+.rosary .count span { font-size: 22px; opacity: .6; }
+.rosary .beads { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 300px; }
+.rosary .beads i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .5); }
+.rosary .beads i.on { background: linear-gradient(135deg, #ff2e8a, #ff9ccc); border-color: transparent; }
+.rosary .beads i.now { box-shadow: 0 0 0 3px rgba(255, 255, 255, .7), 0 0 14px rgba(255, 46, 138, .9); }
+.rosary .tap-hint { font-size: 12px; opacity: .55; }
+.prayer-text { margin-top: 16px; padding: 16px 18px; border-radius: 20px; background: rgba(255, 255, 255, .08); font-family: var(--serif); font-size: 16px; line-height: 1.65; }
+.prayer-text p { margin: 0 0 10px; }
+
+/* ---------- Collections ---------- */
+.insp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.insp { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.insp-thumb { position: relative; display: block; aspect-ratio: 3 / 4; background: linear-gradient(160deg, var(--pink-soft), var(--lilac)), url("leopard.svg") 0 0 / 120px; background-blend-mode: multiply; }
+.insp-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.insp-pf { position: absolute; left: 8px; top: 8px; background: rgba(23, 17, 26, .75); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+.insp-tried { position: absolute; right: 8px; top: 8px; background: var(--pink); color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; }
+.insp-body { padding: 10px 12px 12px; }
+.insp-body .t { font-weight: 700; font-size: 13.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.insp-body .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.insp.tried { opacity: .8; }
+.rosary .chips { flex-wrap: wrap; justify-content: center; overflow: visible; padding: 12px 0 4px; gap: 6px; }
+.rosary .chip { padding: 6px 12px; font-size: 12.5px; }

@@ -7,6 +7,7 @@
 - **Tâches** : filtres Tout, Pro, École et Perso ; en retard, aujourd'hui (avec heures), cette semaine, plus tard.
 - **Calendrier** : le mois avec des pastilles, et l'agenda du jour choisi (tâches, routines, paiements, revenus, voyages).
 - **Argent** : solde disponible (masquable), revenus et dépenses du mois, prochains revenus, dépenses à venir, dépenses, épargne, dettes.
+- **Mes graphiques** 📊 (depuis Argent) : revenus et dépenses des 6 derniers mois, dépenses par catégorie, rythme de dépense du mois comparé au budget, moyenne mensuelle, vue en tableau.
 - **Carrière** : objectif CDI avec avancement, candidatures, entretiens, formations, projets.
 - **École** : formation et avancement de l'année, échéances, cours et projets.
 - **Voyages** : prochain voyage en photo, budget, liste avec statuts ; pour chaque voyage, billets, hôtels, checklist et documents.

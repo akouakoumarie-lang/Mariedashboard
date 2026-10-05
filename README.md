@@ -8,6 +8,9 @@ Mon cockpit personnel : toute ma vie au même endroit.
 - **🎓 École** : devoirs, examens, rattrapages, échéances, TOEIC, documents importants.
 - **✈️ Voyages** : destination, dates, compte à rebours, budget prévu et dépensé, billets et hôtels, checklist, documents.
 - **🏠 Quotidien** : courses, démarches administratives, renouvellement de documents, rappels, routines, abonnements et factures.
+- **✨ Manifestation** : affirmation du jour (aussi en haut de la page Aujourd'hui), vision board avec photos, rêves « manifestés », 3 gratitudes par jour avec série de jours, liste d'affirmations personnalisable.
+
+Le tout en **rose et léopard** 🐆💕, en mode clair ou sombre.
 
 ## Utilisation
 
@@ -18,7 +21,16 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
-On peut aussi l'héberger gratuitement avec GitHub Pages (Settings → Pages → branche principale) et l'ajouter à l'écran d'accueil du téléphone.
+### Mettre l'app en ligne (GitHub Pages)
+
+1. Sur GitHub, ouvrir le dépôt → **Settings** → **Pages**.
+2. *Source* : **Deploy from a branch**.
+3. *Branch* : `claude/marie-dashboard-personal-9ve4y3`, dossier **/ (root)** → **Save**.
+4. Après 1 à 2 minutes, l'app est disponible à l'adresse
+   `https://akouakoumarie-lang.github.io/Mariedashboard/`.
+
+Sur le téléphone, ouvrir cette adresse puis « Ajouter à l'écran d'accueil » (Safari : bouton Partager ; Chrome : menu ⋮).
+L'adresse est publique mais **les données ne le sont pas** : elles restent dans le navigateur de chaque appareil.
 
 ## Données
 

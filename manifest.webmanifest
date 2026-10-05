@@ -5,8 +5,8 @@
   "lang": "fr",
   "start_url": "./#/aujourdhui",
   "display": "standalone",
-  "background_color": "#f7f4ef",
-  "theme_color": "#b4532a",
+  "background_color": "#fff1f6",
+  "theme_color": "#e0337a",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]

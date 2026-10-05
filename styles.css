@@ -1,68 +1,88 @@
+/* Palette rose & léopard */
 :root {
-  --bg: #f7f4ef;
+  --bg: #fff1f6;
   --surface: #ffffff;
-  --surface-2: #f1ede6;
-  --border: #e6e0d6;
-  --text: #1f1d1a;
-  --muted: #6f6a62;
-  --accent: #b4532a;
-  --accent-soft: #f6e3d8;
+  --surface-2: #ffe6ef;
+  --border: #f7cadb;
+  --text: #2e1420;
+  --muted: #8c5a70;
+  --accent: #e0337a;
+  --accent-2: #ff8fbf;
+  --accent-soft: #ffdcea;
   --good: #2f7d4f;
   --good-soft: #dff0e5;
   --warn: #a86a00;
   --warn-soft: #fbedcc;
-  --bad: #b3261e;
-  --bad-soft: #f9dedb;
-  --info: #2c5d9e;
-  --info-soft: #dde8f7;
-  --shadow: 0 1px 2px rgba(40, 30, 20, .06), 0 4px 16px rgba(40, 30, 20, .05);
-  --radius: 14px;
+  --bad: #c0262d;
+  --bad-soft: #fbdde0;
+  --info: #8a3fbf;
+  --info-soft: #f1e2fb;
+  --leo-base: #f7b3cd;
+  --leo-tint: rgba(255, 240, 246, .0);
+  --glass: rgba(255, 255, 255, .82);
+  --shadow: 0 1px 2px rgba(120, 20, 60, .06), 0 6px 18px rgba(200, 40, 110, .08);
+  --radius: 16px;
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #16161a;
-    --surface: #1f1f24;
-    --surface-2: #26262c;
-    --border: #33333a;
-    --text: #f1eee9;
-    --muted: #a19c94;
-    --accent: #ec8a5c;
-    --accent-soft: #3a261d;
+    --bg: #1d0e16;
+    --surface: #28131e;
+    --surface-2: #351a28;
+    --border: #4d2539;
+    --text: #fde9f1;
+    --muted: #cf9cb2;
+    --accent: #ff5c9d;
+    --accent-2: #ff9cc6;
+    --accent-soft: #4a1d33;
     --good: #6cc790;
     --good-soft: #1d3326;
     --warn: #e5b04a;
     --warn-soft: #382c14;
-    --bad: #f08a80;
-    --bad-soft: #3d1f1d;
-    --info: #86b2ec;
-    --info-soft: #1c2a3d;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --bad: #ff8a8f;
+    --bad-soft: #43191f;
+    --info: #d29cff;
+    --info-soft: #33203f;
+    --leo-base: #b8457a;
+    --leo-tint: rgba(29, 14, 22, .25);
+    --glass: rgba(40, 19, 30, .85);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #16161a;
-  --surface: #1f1f24;
-  --surface-2: #26262c;
-  --border: #33333a;
-  --text: #f1eee9;
-  --muted: #a19c94;
-  --accent: #ec8a5c;
-  --accent-soft: #3a261d;
+  --bg: #1d0e16;
+  --surface: #28131e;
+  --surface-2: #351a28;
+  --border: #4d2539;
+  --text: #fde9f1;
+  --muted: #cf9cb2;
+  --accent: #ff5c9d;
+  --accent-2: #ff9cc6;
+  --accent-soft: #4a1d33;
   --good: #6cc790;
   --good-soft: #1d3326;
   --warn: #e5b04a;
   --warn-soft: #382c14;
-  --bad: #f08a80;
-  --bad-soft: #3d1f1d;
-  --info: #86b2ec;
-  --info-soft: #1c2a3d;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  --bad: #ff8a8f;
+  --bad-soft: #43191f;
+  --info: #d29cff;
+  --info-soft: #33203f;
+  --leo-base: #b8457a;
+  --leo-tint: rgba(29, 14, 22, .25);
+  --glass: rgba(40, 19, 30, .85);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35);
   color-scheme: dark;
+}
+
+/* Motif léopard réutilisable */
+.leopard {
+  background-color: var(--leo-base);
+  background-image: linear-gradient(var(--leo-tint), var(--leo-tint)), url("leopard.svg");
+  background-size: auto, 200px 200px;
 }
 
 * { box-sizing: border-box; }
@@ -93,10 +113,12 @@ a { color: inherit; }
   flex-shrink: 0;
   padding: 20px 12px;
   border-right: 1px solid var(--border);
-  background: var(--surface);
+  background-color: var(--leo-base);
+  background-image: linear-gradient(var(--leo-tint), var(--leo-tint)), url("leopard.svg");
+  background-size: auto, 200px 200px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .nav a {
@@ -106,15 +128,17 @@ a { color: inherit; }
   padding: 9px 12px;
   border-radius: 10px;
   text-decoration: none;
-  color: var(--muted);
-  font-weight: 500;
+  color: var(--text);
+  font-weight: 600;
+  background: var(--glass);
+  backdrop-filter: blur(3px);
 }
 
-.nav a:hover { background: var(--surface-2); color: var(--text); }
-.nav a.active { background: var(--accent-soft); color: var(--accent); }
+.nav a:hover { background: var(--surface); }
+.nav a.active { background: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(224, 51, 122, .35); }
 .nav .ico { width: 22px; text-align: center; }
 .nav .brand { margin-bottom: 14px; color: var(--text); font-weight: 700; }
-.nav .brand:hover { background: none; }
+.nav .brand:hover { background: var(--glass); }
 .nav-settings { margin-top: auto; }
 
 .brand-mark {
@@ -123,7 +147,7 @@ a { color: inherit; }
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #fff;
   font-weight: 800;
 }
@@ -147,11 +171,18 @@ a { color: inherit; }
     justify-content: space-around;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
     border-right: 0;
-    border-top: 1px solid var(--border);
+    border-top: 5px solid transparent;
+    border-image: url("leopard.svg") 40 round;
+    background: var(--surface);
     z-index: 10;
+    gap: 0;
   }
-  .nav .brand, .nav-settings { display: none; }
-  .nav a { flex-direction: column; gap: 2px; padding: 6px 4px; font-size: 11px; flex: 1; text-align: center; }
+  .nav .brand, .nav a.nav-settings { display: none; }
+  .nav a[data-short] > span:last-child { display: none; }
+  .nav a[data-short]::after { content: attr(data-short); }
+  .nav a { flex-direction: column; gap: 2px; padding: 6px 0; font-size: 10px; flex: 1 1 0; min-width: 0; text-align: center; background: none; backdrop-filter: none; color: var(--muted); }
+  .nav a > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav a.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
   .nav .ico { font-size: 19px; width: auto; }
   .main { padding: 18px 16px 100px; }
 }
@@ -196,9 +227,9 @@ a { color: inherit; }
 
 /* ---------- Today hero ---------- */
 .hero {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--leo-base) url("leopard.svg") 0 0 / 200px border-box;
+  border: 8px solid transparent;
+  border-radius: 24px;
   box-shadow: var(--shadow);
   padding: 22px;
   display: grid;
@@ -228,7 +259,7 @@ a { color: inherit; }
 .hero-money { display: flex; flex-direction: column; gap: 12px; }
 
 .big-stat {
-  background: var(--accent-soft);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-2));
   border-radius: 14px;
   padding: 16px;
 }
@@ -301,7 +332,7 @@ a { color: inherit; }
   background: var(--surface);
   margin: 0;
 }
-.check:checked { background: var(--good); border-color: var(--good); }
+.check:checked { background: var(--accent); border-color: var(--accent); }
 .check:checked::after { content: "✓"; color: #fff; font-size: 14px; font-weight: 800; }
 .check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -334,7 +365,7 @@ a { color: inherit; }
   color: var(--muted);
 }
 .chip:hover { color: var(--text); }
-.chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .chip .n { opacity: .7; margin-left: 4px; }
 
 /* ---------- Buttons ---------- */
@@ -349,7 +380,7 @@ a { color: inherit; }
   white-space: nowrap;
 }
 .btn:hover { background: var(--surface-2); }
-.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary { background: linear-gradient(135deg, var(--accent), #f0569a); color: #fff; border-color: var(--accent); }
 .btn.primary:hover { filter: brightness(1.06); }
 .btn.ghost { background: transparent; }
 .btn.danger { color: var(--bad); }
@@ -369,7 +400,7 @@ a { color: inherit; }
 /* ---------- Progress ---------- */
 .bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin-top: 8px; }
 .bar > span { display: block; height: 100%; border-radius: 99px; background: var(--good); }
-.bar.accent > span { background: var(--accent); }
+.bar.accent > span { background: var(--leo-base) url("leopard.svg") 0 0 / 60px; }
 .bar.bad > span { background: var(--bad); }
 
 /* ---------- Trips ---------- */
@@ -405,6 +436,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
 }
 .modal::backdrop { background: rgba(20, 15, 10, .45); }
+.modal::before { content: ""; display: block; height: 10px; background: var(--leo-base) url("leopard.svg") 0 0 / 120px; }
 .modal-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
 .modal-form h2 { margin: 0 0 4px; font-size: 19px; }
 .field { display: flex; flex-direction: column; gap: 5px; }
@@ -427,11 +459,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
+  box-shadow: 0 6px 20px rgba(224, 51, 122, .35);
   left: 50%;
   bottom: 24px;
   transform: translate(-50%, 20px);
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: #fff;
   padding: 10px 16px;
   border-radius: 12px;
   font-weight: 600;
@@ -460,3 +493,104 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .mobile-only { display: none; }
 @media (max-width: 760px) { .mobile-only { display: inline-flex; } }
+
+/* ---------- Manifestation ---------- */
+.affirmation {
+  border-radius: 24px;
+  padding: 10px;
+  box-shadow: var(--shadow);
+}
+.affirmation-inner {
+  background: var(--glass);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
+  padding: 26px 22px;
+  text-align: center;
+}
+.affirmation .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.affirmation blockquote {
+  margin: 10px auto 16px;
+  max-width: 34ch;
+  font-size: clamp(21px, 4.4vw, 30px);
+  line-height: 1.25;
+  font-weight: 750;
+  font-style: italic;
+  letter-spacing: -.01em;
+}
+
+.affirmation-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 6px;
+  border-radius: 16px;
+  text-decoration: none;
+}
+.affirmation-banner span {
+  flex: 1;
+  background: var(--glass);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 650;
+  font-style: italic;
+}
+
+.dreams { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.dream {
+  position: relative;
+  min-height: 190px;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  background-size: cover;
+  background-position: center;
+}
+.dream.no-img { background: linear-gradient(160deg, var(--accent-soft), var(--surface-2)); }
+.dream .dream-emoji { position: absolute; top: 14px; left: 16px; font-size: 38px; }
+.dream .dream-text {
+  margin: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(4px);
+}
+.dream .dream-title { font-weight: 700; overflow-wrap: anywhere; }
+.dream .dream-meta { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.dream.manifested { outline: 3px solid var(--accent); outline-offset: -3px; }
+.dream .ribbon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.dream-add {
+  min-height: 190px;
+  border-radius: 18px;
+  border: 2px dashed var(--accent-2);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+.dream-add:hover { background: var(--accent-soft); }
+
+.gratitude-form { display: flex; flex-direction: column; gap: 8px; }
+.gratitude-form label { display: flex; align-items: center; gap: 10px; }
+.gratitude-form .n { color: var(--accent); font-weight: 800; width: 18px; }
+.gratitude-form input { flex: 1; min-width: 0; }
+.gratitude-day + .gratitude-day { border-top: 1px solid var(--border); }
+.gratitude-day { padding: 10px 4px; }
+.gratitude-day ul { margin: 4px 0 0; padding-left: 20px; }
+
+.preview-img { width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; }

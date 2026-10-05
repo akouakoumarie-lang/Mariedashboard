@@ -123,6 +123,28 @@ const EXPENSE_CATEGORIES = ['Courses', 'Transport', 'Restaurants', 'Sorties', 'S
 const INCOME_KINDS = { salaire: 'Salaire', caf: 'CAF', autre: 'Autre' };
 const TRIP_STATUSES = ['Envisagé', 'En préparation', 'Réservé', 'Terminé'];
 const BOOKING_KINDS = { billet: '🎫 Billet', hotel: '🏨 Hôtel', activite: '🎟️ Activité', autre: '📦 Autre' };
+const DREAM_CATEGORIES = {
+  argent: '💰 Argent',
+  carriere: '💼 Carrière',
+  etudes: '🎓 Études',
+  voyages: '✈️ Voyages',
+  amour: '💕 Amour & relations',
+  bienetre: '🌸 Santé & bien-être',
+  maison: '🏠 Maison',
+  moi: '✨ Moi',
+};
+const DEFAULT_AFFIRMATIONS = [
+  'Je mérite tout ce que je désire.',
+  "L'argent vient à moi facilement et en abondance.",
+  'Mon CDI idéal est déjà en route vers moi.',
+  'Je suis capable, brillante et déterminée.',
+  'Chaque jour, je me rapproche de la vie dont je rêve.',
+  'Je réussis mes examens avec confiance et sérénité.',
+  'Je suis reconnaissante pour tout ce que j’ai déjà.',
+  'Les bonnes opportunités me trouvent naturellement.',
+  'Je prends soin de mon corps, de mon esprit et de mon argent.',
+  'Je voyage, je découvre, je vis pleinement.',
+];
 const DEFAULT_CHECKLIST = ["Pièce d'identité / passeport", 'Billets imprimés ou dans le téléphone', 'Réservation hôtel', 'Assurance voyage', 'Chargeur + adaptateur', 'Médicaments', 'Prévenir la banque'];
 
 /* ============================================================
@@ -145,6 +167,11 @@ function emptyState() {
       carry: {},
     },
     trips: [],
+    manifest: {
+      affirmations: DEFAULT_AFFIRMATIONS.map((text) => ({ id: uid(), text })),
+      dreams: [],
+      gratitude: {},
+    },
   };
 }
 
@@ -238,6 +265,13 @@ function sampleState() {
       notes: 'Regarder les prix des billets pour les vacances.',
     },
   ];
+  s.manifest.dreams = [
+    { id: uid(), emoji: '💼', title: 'Décrocher mon CDI', category: 'carriere', date: addDays(t, 180), notes: 'Je me vois signer mon contrat, fière de moi.', image: '', manifested: false },
+    { id: uid(), emoji: '💰', title: '1 500 € d’épargne de précaution', category: 'argent', date: addDays(t, 120), notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '✈️', title: 'Week-end à Lisbonne', category: 'voyages', date: addDays(t, 40), notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '🇬🇧', title: '900+ au TOEIC', category: 'etudes', date: addDays(t, 60), notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '🏠', title: 'Mon appartement à moi', category: 'maison', date: '', notes: '', image: '', manifested: false },
+  ];
   return s;
 }
 
@@ -246,6 +280,7 @@ function normalize(data) {
   const out = { ...base, ...data };
   out.settings = { ...base.settings, ...(data.settings || {}) };
   out.money = { ...base.money, ...(data.money || {}) };
+  out.manifest = { ...base.manifest, ...(data.manifest || {}) };
   for (const k of ['items', 'routines', 'trips']) if (!Array.isArray(out[k])) out[k] = [];
   return out;
 }
@@ -261,7 +296,7 @@ function load() {
 }
 
 let state = load();
-const ui = { filters: {}, showDone: {}, openTrips: new Set() };
+const ui = { filters: {}, showDone: {}, openTrips: new Set(), affShift: 0 };
 
 function save() {
   try {
@@ -379,6 +414,14 @@ function fieldHTML(f, value) {
       return `<div class="field">${label}<div class="days">${[1, 2, 3, 4, 5, 6, 0]
         .map((d) => `<label><input type="checkbox" name="${f.name}" value="${d}" ${(v || []).includes(d) ? 'checked' : ''}/>${WEEKDAYS[d]}</label>`)
         .join('')}</div></div>`;
+    case 'image':
+      return `<div class="field">${label}
+        <img class="preview-img" data-preview="${f.name}" src="${esc(v)}" alt="" ${v ? '' : 'hidden'} />
+        <input type="hidden" name="${f.name}" value="${esc(v)}" />
+        <div class="head-actions">
+          <label class="btn small">📷 Choisir une photo<input type="file" accept="image/*" data-image-for="${f.name}" hidden /></label>
+          <button type="button" class="btn small ghost" data-clear-image="${f.name}">Retirer</button>
+        </div></div>`;
     case 'number':
       return `<label class="field">${label}<input type="text" inputmode="decimal" name="${f.name}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${req}/></label>`;
     default:
@@ -397,6 +440,28 @@ function readForm(form, fields) {
   return data;
 }
 
+// Réduit une photo (max 640 px) pour qu'elle tienne dans le stockage local.
+function resizeImage(file, max = 640) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.78));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('image'));
+    };
+    img.src = url;
+  });
+}
+
 function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onSubmit, onDelete }) {
   const dlg = $('#modal');
   dlg.innerHTML = `<form class="modal-form" novalidate>
@@ -410,6 +475,23 @@ function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onS
     </div>
   </form>`;
   const form = $('form', dlg);
+  const setImage = (name, url) => {
+    form.elements[name].value = url;
+    const img = form.querySelector(`[data-preview="${name}"]`);
+    img.src = url;
+    img.hidden = !url;
+  };
+  form.querySelectorAll('[data-image-for]').forEach((input) =>
+    input.addEventListener('change', async () => {
+      if (!input.files?.[0]) return;
+      try {
+        setImage(input.dataset.imageFor, await resizeImage(input.files[0]));
+      } catch {
+        toast('⚠️ Image illisible');
+      }
+    }),
+  );
+  form.querySelectorAll('[data-clear-image]').forEach((btn) => btn.addEventListener('click', () => setImage(btn.dataset.clearImage, '')));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const missing = fields.find((f) => f.required && !String(form.elements[f.name].value).trim());
@@ -681,6 +763,32 @@ function bookingForm(trip, b) {
   });
 }
 
+function dreamForm(dream) {
+  openForm({
+    title: dream ? 'Modifier mon rêve' : 'Nouveau rêve à manifester',
+    fields: [
+      { name: 'emoji', label: 'Emoji', placeholder: '✨' },
+      { name: 'title', label: 'Ce que je manifeste', required: true, placeholder: 'Mon CDI, mon appart, 2 000 € d’épargne…' },
+      { name: 'category', label: 'Domaine', type: 'select', options: Object.entries(DREAM_CATEGORIES) },
+      { name: 'date', label: 'Pour quand ?', type: 'date' },
+      { name: 'notes', label: 'Ce que je ressens quand c’est réalisé', type: 'textarea', placeholder: 'Écris-le au présent, comme si c’était déjà là…' },
+      { name: 'image', label: 'Photo pour mon vision board', type: 'image' },
+      { name: 'manifested', label: 'C’est manifesté ! ✨', type: 'checkbox' },
+    ],
+    values: dream || { emoji: '✨', category: 'moi' },
+    onSubmit: (d) => {
+      const wasDone = dream?.manifested;
+      if (dream) Object.assign(dream, d);
+      else state.manifest.dreams.push({ id: uid(), ...d });
+      commit(d.manifested && !wasDone ? '🎉 Manifesté ! Bravo Marie ✨' : 'Rêve enregistré ✨');
+    },
+    onDelete: dream ? () => {
+      state.manifest.dreams = state.manifest.dreams.filter((x) => x !== dream);
+      commit('Rêve retiré');
+    } : null,
+  });
+}
+
 /* ============================================================
    Composants
    ============================================================ */
@@ -771,6 +879,7 @@ function viewToday() {
   summary.push(line('#/ecole', '🎓', esc(AREAS.ecole.todayLabel(school.length)), !school.length));
   summary.push(line('#/argent', '💰', esc(`${bills.length} paiement${bills.length > 1 ? 's' : ''} à prévoir`), !bills.length));
   if (daily.length) summary.push(line('#/quotidien', '🏠', esc(AREAS.quotidien.todayLabel(daily.length))));
+  const grat = state.manifest.gratitude[t] || [];
   for (const r of routines) {
     const done = !!r.log[t];
     summary.push(`<li><a href="#/quotidien"><span class="emo">${esc(r.emoji)}</span><span class="${done ? 'done-line' : ''}">${esc(r.label)}</span></a></li>`);
@@ -778,6 +887,8 @@ function viewToday() {
   if (shopping.length && !routines.some((r) => /course/i.test(r.label))) {
     summary.push(line('#/quotidien', '🛒', esc(`Courses (${shopping.length} article${shopping.length > 1 ? 's' : ''})`)));
   }
+
+  if (!grat.some((x) => x.trim())) summary.push(line('#/manifestation', '🙏', 'Mes 3 gratitudes du jour'));
 
   let salaryText = 'Ajoute ton salaire dans Argent';
   if (salary) {
@@ -813,11 +924,16 @@ function viewToday() {
       <div class="sub">${esc(capitalize(dateLong.format(now)))}</div>
     </div>
     <div class="head-actions">
+      <a class="btn mobile-only" href="#/reglages" aria-label="Réglages">⚙️</a>
       <button class="btn" data-action="quick-expense">− Dépense</button>
       <button class="btn primary" data-action="quick-add">+ Ajouter</button>
     </div>
   </header>
 
+  ${(() => {
+    const aff = affirmationOfDay();
+    return aff ? `<a href="#/manifestation" class="affirmation-banner leopard"><span>✨ ${esc(aff.text)}</span></a>` : '';
+  })()}
   <section class="hero">
     <div>
       <h2>Aujourd'hui</h2>
@@ -1212,6 +1328,104 @@ function tripBody(tr) {
   </div>`;
 }
 
+function affirmationOfDay() {
+  const list = state.manifest.affirmations;
+  if (!list.length) return null;
+  const dayNumber = Math.floor(parseISO(todayISO()).getTime() / 86400000);
+  return list[(((dayNumber + ui.affShift) % list.length) + list.length) % list.length];
+}
+
+function gratitudeStreak() {
+  let streak = 0;
+  let d = todayISO();
+  const has = (day) => (state.manifest.gratitude[day] || []).some((x) => x.trim());
+  if (!has(d)) d = addDays(d, -1);
+  while (has(d)) {
+    streak++;
+    d = addDays(d, -1);
+  }
+  return streak;
+}
+
+function viewManifest() {
+  const mf = state.manifest;
+  const aff = affirmationOfDay();
+  const t = todayISO();
+  const todayGrat = mf.gratitude[t] || ['', '', ''];
+  const dreams = mf.dreams.slice().sort((a, b) => Number(a.manifested) - Number(b.manifested) || (a.date || '9').localeCompare(b.date || '9'));
+  const manifested = mf.dreams.filter((d) => d.manifested).length;
+  const streak = gratitudeStreak();
+
+  const dreamsHTML = dreams
+    .map((d) => {
+      const bg = d.image ? ` style="background-image:url('${esc(d.image)}')"` : '';
+      const when = d.date && !d.manifested ? `<span>${esc(daysBetween(t, d.date) >= 0 ? inDays(daysBetween(t, d.date)) : fmtDate(d.date))}</span>` : '';
+      return `<div class="dream ${d.image ? '' : 'no-img'} ${d.manifested ? 'manifested' : ''}" data-action="edit-dream" data-id="${d.id}"${bg} role="button" tabindex="0">
+        ${d.image ? '' : `<span class="dream-emoji">${esc(d.emoji || '✨')}</span>`}
+        ${d.manifested ? '<span class="ribbon">Manifesté ✨</span>' : ''}
+        <div class="dream-text">
+          <div class="dream-title">${d.image ? esc(d.emoji || '') + ' ' : ''}${esc(d.title)}</div>
+          <div class="dream-meta"><span>${esc(DREAM_CATEGORIES[d.category] || '')}</span>${when}</div>
+        </div>
+      </div>`;
+    })
+    .join('');
+
+  const history = Object.keys(mf.gratitude)
+    .filter((day) => day < t && mf.gratitude[day].some((x) => x.trim()))
+    .sort()
+    .reverse()
+    .slice(0, 7)
+    .map((day) => `<div class="gratitude-day"><div class="small muted">${esc(capitalize(dateLong.format(parseISO(day))))}</div><ul>${mf.gratitude[day].filter((x) => x.trim()).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`)
+    .join('');
+
+  return `
+  <header class="page-head">
+    <div><h1>✨ Manifestation</h1><div class="sub">Visualise, remercie, attire.</div></div>
+    <div class="head-actions"><button class="btn primary" data-action="add-dream">+ Nouveau rêve</button></div>
+  </header>
+
+  <section class="affirmation leopard">
+    <div class="affirmation-inner">
+      <div class="kicker">Mon affirmation du jour</div>
+      <blockquote>${aff ? `« ${esc(aff.text)} »` : 'Ajoute ta première affirmation ci-dessous 💕'}</blockquote>
+      ${mf.affirmations.length > 1 ? '<button class="btn small" data-action="next-affirmation">🔄 Une autre</button>' : ''}
+    </div>
+  </section>
+
+  <div class="grid grid-tiles section">
+    ${tile('Rêves en cours', mf.dreams.length - manifested, '', 'accent')}
+    ${tile('Déjà manifestés', manifested, manifested ? 'la preuve que ça marche ✨' : 'le premier arrive…', 'accent')}
+    ${tile('Gratitude', `${streak} jour${streak > 1 ? 's' : ''}`, 'de suite', 'accent')}
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h2>💖 Mon vision board</h2><span class="hint">Touche un rêve pour le modifier ou ajouter une photo</span></div>
+    <div class="dreams">${dreamsHTML}<button class="dream-add" data-action="add-dream">+ Ajouter un rêve</button></div>
+  </div>
+
+  <div class="grid grid-2 section">
+    <div class="card">
+      <div class="section-head"><h2>🙏 Gratitude du jour</h2><span class="hint">3 choses pour lesquelles je dis merci</span></div>
+      <form class="gratitude-form" data-form="gratitude">
+        ${[0, 1, 2].map((i) => `<label><span class="n">${i + 1}</span><input class="input" name="g${i}" value="${esc(todayGrat[i] || '')}" placeholder="${['Aujourd’hui je suis reconnaissante pour…', 'Une personne qui compte pour moi…', 'Une petite victoire du jour…'][i]}" autocomplete="off" /></label>`).join('')}
+        <div><button class="btn primary small" type="submit">Enregistrer</button></div>
+      </form>
+      ${history ? `<div class="group-label">Les jours précédents</div>${history}` : ''}
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>💬 Mes affirmations</h2><span class="hint">${mf.affirmations.length}</span></div>
+      <ul class="list">${mf.affirmations
+        .map((a) => `<li class="row"><div class="grow"><div class="title" style="font-style:italic">${esc(a.text)}</div></div><button class="icon-btn" data-action="del-affirmation" data-id="${a.id}" aria-label="Retirer">✕</button></li>`)
+        .join('')}</ul>
+      <form class="inline-add" data-form="add-affirmation">
+        <input name="text" placeholder="J’attire… / Je suis… / Je mérite…" autocomplete="off" />
+        <button class="btn small" type="submit">Ajouter</button>
+      </form>
+    </div>
+  </div>`;
+}
+
 /* ============================================================
    Vue : Réglages
    ============================================================ */
@@ -1259,6 +1473,7 @@ const ROUTES = {
   ecole: () => viewArea('ecole'),
   voyages: viewTrips,
   quotidien: () => viewArea('quotidien'),
+  manifestation: viewManifest,
   reglages: viewSettings,
 };
 
@@ -1418,6 +1633,18 @@ const actions = {
     commit();
   },
 
+  // Manifestation
+  'add-dream': () => dreamForm(),
+  'edit-dream': (el) => dreamForm(findById(state.manifest.dreams, el.dataset.id)),
+  'next-affirmation': () => {
+    ui.affShift++;
+    render();
+  },
+  'del-affirmation': (el) => {
+    state.manifest.affirmations = state.manifest.affirmations.filter((a) => a.id !== el.dataset.id);
+    commit();
+  },
+
   // Réglages
   theme: (el) => {
     const v = el.dataset.theme;
@@ -1459,6 +1686,13 @@ document.addEventListener('click', (e) => {
   actions[el.dataset.action]?.(el, e);
 });
 
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.dream[data-action]')) {
+    e.preventDefault();
+    actions[e.target.dataset.action]?.(e.target, e);
+  }
+});
+
 document.addEventListener('change', (e) => {
   const el = e.target;
   if (el.dataset?.action !== 'import' || !el.files?.[0]) return;
@@ -1489,6 +1723,16 @@ document.addEventListener('submit', (e) => {
     tr.checklist.push({ id: uid(), text, done: false });
     commit();
     $(`form[data-form="add-check"][data-trip="${tr.id}"] input`)?.focus();
+  } else if (form.dataset.form === 'gratitude') {
+    const entries = [0, 1, 2].map((i) => form.elements[`g${i}`].value.trim());
+    state.manifest.gratitude[todayISO()] = entries;
+    commit(entries.some(Boolean) ? 'Merci, merci, merci 🙏✨' : null);
+  } else if (form.dataset.form === 'add-affirmation') {
+    const text = form.elements.text.value.trim();
+    if (!text) return;
+    state.manifest.affirmations.push({ id: uid(), text });
+    commit('Affirmation ajoutée 💕');
+    $('form[data-form="add-affirmation"] input')?.focus();
   } else if (form.dataset.form === 'set-name') {
     state.settings.name = form.elements.name.value.trim() || 'Marie';
     commit('Profil mis à jour ✓');

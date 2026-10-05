@@ -11,6 +11,7 @@
 - **École** : formation et avancement de l'année, échéances, cours et projets.
 - **Voyages** : prochain voyage en photo, budget, liste avec statuts ; pour chaque voyage, billets, hôtels, checklist et documents.
 - **Ma carte** 🗺️ : tous tes voyages sur une carte interactive, avec un repère par destination et son drapeau, la couleur du statut et le trajet de l'année en pointillés. Filtres par année et « Rêves ». Touche la carte pour ajouter un voyage à cet endroit. Les lieux sont trouvés automatiquement grâce à OpenStreetMap.
+- **Recettes saines** 🥗 : fiches recettes (photo, temps, calories, étiquettes végé, protéiné, rapide, meal prep…) et quantités ajustées au nombre de portions. Ingrédients à cocher, mode cuisine qui garde l'écran allumé, ingrédients envoyés dans la liste de courses. **Menu de la semaine**, avec la liste de courses générée en un clic. Un TikTok de ta collection Recettes peut devenir une recette.
 - **Objectifs** : par domaine, avec barre d'avancement.
 - **Manifestation** : « Tu fais déjà un super travail ♥ », autocollants, affirmation du jour, gratitude, vision board avec photos.
 - **Prière** ✝ : chapelet guidé grain par grain (mystères du jour, textes des prières, reprise là où tu t'étais arrêtée), neuvaines avec suivi des 9 jours, intentions de prière, série de jours.

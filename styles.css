@@ -882,3 +882,50 @@ input[type="range"] { width: 100%; accent-color: var(--pink); }
 .pp-a { display: inline-block; margin-top: 8px; font-weight: 700; color: #ff2e8a !important; }
 .leaflet-control-zoom { margin-bottom: calc(170px + env(safe-area-inset-bottom)) !important; border: 0 !important; box-shadow: var(--shadow) !important; }
 .leaflet-control-attribution { font-size: 9px; }
+
+/* ---------- Recettes ---------- */
+.recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.recipe-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); text-align: left; padding: 0; cursor: pointer; }
+.rc-img { position: relative; aspect-ratio: 4 / 3; background-size: cover; background-position: center; }
+.rc-img.no-img { display: grid; place-items: center; background: linear-gradient(160deg, var(--peach), var(--pink-soft)); }
+.rc-img.no-img span { font-size: 46px; }
+.rc-fav { position: absolute; top: 8px; right: 10px; color: var(--pink); font-style: normal; font-size: 18px; text-shadow: 0 1px 4px rgba(255, 255, 255, .8); }
+.rc-body { padding: 10px 12px 12px; }
+.rc-body .t { font-weight: 700; font-size: 14px; line-height: 1.25; }
+.rc-body .s { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.recipe-card.add { align-items: center; justify-content: center; gap: 6px; min-height: 180px; border: 2px dashed var(--pink-2); background: transparent; color: var(--pink); font-weight: 700; box-shadow: none; }
+
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-col { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; min-width: 0; }
+.day-col.today { background: var(--ink); color: #fff; border-color: var(--ink); }
+.day-col .dn { font-size: 11px; font-weight: 600; opacity: .7; }
+.day-col .dd { font-weight: 800; font-size: 15px; }
+.day-col .meals { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 40px; font-style: normal; }
+.day-col .meals i { font-style: normal; font-size: 16px; line-height: 1.2; }
+.day-col .meals .empty-meal { color: var(--pink); font-weight: 700; opacity: .7; }
+
+.recipe-hero {
+  position: relative;
+  min-height: 300px;
+  padding: 24px 20px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  background-color: #3a1427;
+  background-size: cover;
+  background-position: center;
+}
+.recipe-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 5, 9, .35), transparent 35%, rgba(10, 5, 9, .7)); }
+.recipe-hero.no-img { background: radial-gradient(circle at 70% 30%, rgba(255, 46, 138, .6), transparent 60%), linear-gradient(rgba(40, 12, 28, .55), rgba(40, 12, 28, .55)), url("leopard-pink.svg") 0 0 / 200px, #17111a; }
+.recipe-hero > * { position: relative; }
+.hero-emoji { font-size: 72px; text-align: center; }
+.recipe-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.recipe-meta span { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; }
+.servings { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.steps { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+.steps li { counter-increment: step; position: relative; padding: 12px 14px 12px 52px; margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; line-height: 1.5; }
+.steps li::before { content: counter(step); position: absolute; left: 12px; top: 10px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--pink); color: #fff; font-family: var(--bubble); font-size: 14px; }
+.plan-grid { display: flex; flex-direction: column; gap: 8px; }
+.plan-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.plan-row > span { width: 90px; }

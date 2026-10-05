@@ -6,6 +6,7 @@ import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp
 import { pushSupport, registerSW, currentSubscription, enablePush, disablePush, generateKeys } from './push.js';
 import { PRAYERS, MYSTERIES, MYSTERY_OF_DAY, rosarySteps, NOVENA_TEMPLATES } from './prayer-data.js';
 import { mountMap, unmountMap, geocode, reverseGeocode, flagOf } from './map.js';
+import { RECIPE_CATEGORIES, RECIPE_TAGS, MEALS, SAMPLE_RECIPES } from './recipes-data.js';
 
 const STORAGE_KEY = 'marie-dashboard:v1';
 
@@ -206,6 +207,8 @@ function emptyState() {
       collections: DEFAULT_COLLECTIONS.slice(),
       items: [],
     },
+    recipes: [],
+    mealPlan: {},
   };
 }
 
@@ -292,6 +295,9 @@ function sampleState() {
     { id: uid(), emoji: '🇧🇷', title: 'Brésil', category: 'voyages', progress: 20, date: '', notes: '', image: '', manifested: false },
     { id: uid(), emoji: '🏠', title: 'Nouveau logement', category: 'maison', progress: 15, date: '', notes: '', image: '', manifested: false },
   ];
+  s.recipes = SAMPLE_RECIPES.map((r) => ({ id: uid(), image: '', link: '', notes: '', favorite: false, ...r }));
+  s.recipes[2].favorite = true;
+  s.mealPlan = { [t]: { soir: s.recipes[2].id }, [addDays(t, 1)]: { matin: s.recipes[0].id, midi: s.recipes[1].id } };
   s.prayer.rosary.daily = true;
   s.prayer.rosary.time = '21:30';
   s.prayer.novenas = [
@@ -316,7 +322,8 @@ function normalize(data) {
   out.settings.push.prefs = { ...base.settings.push.prefs, ...(data.settings?.push?.prefs || {}) };
   out.money = { ...base.money, ...(data.money || {}) };
   out.manifest = { ...base.manifest, ...(data.manifest || {}) };
-  for (const k of ['items', 'routines', 'trips']) if (!Array.isArray(out[k])) out[k] = [];
+  for (const k of ['items', 'routines', 'trips', 'recipes']) if (!Array.isArray(out[k])) out[k] = [];
+  if (!out.mealPlan || typeof out.mealPlan !== 'object') out.mealPlan = {};
   out.items = out.items.map((i) => ({ time: '', status: '', notes: '', ...i }));
   out.routines = out.routines.map((r) => ({ time: '', log: {}, days: [], ...r }));
   out.trips = out.trips.map((tr) => ({ emoji: '✈️', image: '', bookings: [], checklist: [], notes: '', ...tr, status: LEGACY_TRIP_STATUS[tr.status] || tr.status || 'À planifier' }));
@@ -355,6 +362,10 @@ const ui = {
   pushDevice: 'unknown',
   inspFilter: 'all',
   mapFilter: 'all',
+  recipeFilter: 'all',
+  recipeSearch: '',
+  servings: {},
+  checkedIng: {},
   mapView: null,
   pickTrip: null,
   showPrayerText: true,
@@ -519,6 +530,10 @@ function fieldHTML(f, value) {
       return `<label class="field field-check"><input type="checkbox" class="circle" name="${f.name}" ${v ? 'checked' : ''}/>${esc(f.label)}</label>`;
     case 'range':
       return `<label class="field">${label.replace('</span>', ` · <output>${Number(v) || 0} %</output></span>`)}<input type="range" name="${f.name}" min="0" max="100" step="5" value="${Number(v) || 0}" oninput="this.previousElementSibling.querySelector('output').textContent=this.value+' %'"/></label>`;
+    case 'multi':
+      return `<div class="field">${label}<div class="days">${f.options
+        .map((o) => `<label><input type="checkbox" name="${f.name}" value="${esc(o)}" ${(v || []).includes(o) ? 'checked' : ''}/>${esc(o)}</label>`)
+        .join('')}</div></div>`;
     case 'days':
       return `<div class="field">${label}<div class="days">${[1, 2, 3, 4, 5, 6, 0]
         .map((d) => `<label><input type="checkbox" name="${f.name}" value="${d}" ${(v || []).includes(d) ? 'checked' : ''}/>${WEEKDAYS[d]}</label>`)
@@ -543,6 +558,7 @@ function readForm(form, fields) {
   for (const f of fields) {
     const el = form.elements[f.name];
     if (f.type === 'checkbox') data[f.name] = el.checked;
+    else if (f.type === 'multi') data[f.name] = [...form.querySelectorAll(`input[name="${f.name}"]:checked`)].map((i) => i.value);
     else if (f.type === 'days') data[f.name] = [...form.querySelectorAll(`input[name="${f.name}"]:checked`)].map((i) => Number(i.value));
     else if (f.type === 'number' || f.type === 'range') data[f.name] = parseFloat(String(el.value).replace(/\s/g, '').replace(',', '.')) || 0;
     else data[f.name] = el.value.trim();
@@ -1044,7 +1060,7 @@ function taskRow(i, { showDate = true } = {}) {
     <input type="checkbox" class="circle" data-action="toggle-item" data-id="${i.id}" ${i.done ? 'checked' : ''} aria-label="Fait" />
     <div class="grow">
       <div class="t">${esc(i.title)}</div>
-      <div class="s"><span>${esc(k.tag)}</span>${i.status ? `<span class="badge pink">${esc(i.status)}</span>` : ''}${late ? '<span class="badge bad">en retard</span>' : ''}</div>
+      <div class="s"><span>${esc(k.tag)}</span>${i.status ? `<span class="badge pink">${esc(i.status)}</span>` : ''}${late ? '<span class="badge bad">en retard</span>' : ''}${i.notes ? `<span>· ${esc(i.notes.length > 42 ? `${i.notes.slice(0, 42)}…` : i.notes)}</span>` : ''}</div>
     </div>
     ${right ? `<div class="r">${right}</div>` : ''}
   </li>`;
@@ -1144,6 +1160,14 @@ function viewHome() {
       <div class="ico-box lilac">📿</div>
       <div class="grow"><div class="t">Chapelet</div><div class="s">${esc(MYSTERIES[MYSTERY_OF_DAY[now.getDay()]].label)}${state.prayer.rosary.time ? ` · ${esc(fmtTime(state.prayer.rosary.time))}` : ''}</div></div>
       ${prayed ? '<span class="badge good">✓</span>' : `<span class="chev">${icon('right')}</span>`}</li>`);
+  }
+  const menu = state.mealPlan[t] || {};
+  const menuTxt = Object.keys(MEALS).filter((m) => menu[m] && recipeById(menu[m])).map((m) => `${recipeById(menu[m]).title} (${MEALS[m].toLowerCase()})`);
+  if (menuTxt.length) {
+    rows.push(`<li class="row tap" data-action="goto" data-href="#/recettes">
+      <div class="ico-box peach">🍽️</div>
+      <div class="grow"><div class="t">Au menu aujourd’hui</div><div class="s">${esc(menuTxt.join(' · '))}</div></div>
+      <span class="chev">${icon('right')}</span></li>`);
   }
   for (const n of activeNovenas()) {
     const day = novenaDay(n);
@@ -2003,6 +2027,232 @@ async function mapClick(lat, lng) {
   const place = await reverseGeocode(lat, lng);
   tripForm(null, { lat, lng, destination: place?.name || '', country: place?.country || '', emoji: flagOf(place?.country) || '✈️' });
 }
+
+/* ============================================================
+   Recettes saines & menu de la semaine
+   ============================================================ */
+
+const FRACTIONS = { '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3 };
+const qtyFmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
+// Ajuste la quantité en début de ligne (« 200 g de… », « 1/2 concombre », « 1,5 l… »).
+function scaleLine(line, factor) {
+  if (factor === 1) return line;
+  return line.replace(/^(\d+(?:[.,]\d+)?\/\d+|\d+(?:[.,]\d+)?|[½¼¾⅓⅔])/, (m) => {
+    let v;
+    if (FRACTIONS[m]) v = FRACTIONS[m];
+    else if (m.includes('/')) {
+      const [a, b] = m.split('/');
+      v = parseFloat(a.replace(',', '.')) / parseFloat(b);
+    } else v = parseFloat(m.replace(',', '.'));
+    const r = v * factor;
+    return qtyFmt.format(r >= 10 ? Math.round(r) : Math.round(r * 4) / 4 || Math.round(r * 100) / 100);
+  });
+}
+
+const recipeById = (id) => findById(state.recipes, id);
+const lines = (s) => String(s || '').split('\n').map((x) => x.trim()).filter(Boolean);
+
+function recipeForm(recipe, preset = {}) {
+  openForm({
+    title: recipe ? 'Modifier la recette' : 'Nouvelle recette 🥗',
+    fields: [
+      { name: 'emoji', label: 'Emoji', placeholder: '🥗' },
+      { name: 'title', label: 'Nom de la recette', required: true, placeholder: 'Bowl saumon avocat' },
+      { name: 'category', label: 'Moment', type: 'select', options: Object.entries(RECIPE_CATEGORIES) },
+      { name: 'tags', label: 'Étiquettes', type: 'multi', options: RECIPE_TAGS },
+      { name: 'time', label: 'Temps (minutes)', type: 'number' },
+      { name: 'servings', label: 'Portions', type: 'number' },
+      { name: 'kcal', label: 'Calories par portion (optionnel)', type: 'number' },
+      { name: 'ingredients', label: 'Ingrédients (un par ligne, quantité au début)', type: 'textarea', placeholder: '200 g de poulet\n1 avocat\n2 c. à soupe d’huile d’olive' },
+      { name: 'steps', label: 'Étapes (une par ligne)', type: 'textarea', placeholder: 'Couper les légumes\nFaire cuire 10 minutes…' },
+      { name: 'image', label: 'Photo', type: 'image' },
+      { name: 'link', label: 'Lien (TikTok, site…)', type: 'url', placeholder: 'https://…' },
+      { name: 'notes', label: 'Mes astuces', type: 'textarea' },
+    ],
+    values: recipe
+      ? { ...recipe, ingredients: recipe.ingredients.join('\n'), steps: recipe.steps.join('\n') }
+      : { emoji: '🥗', category: 'midi', tags: [], servings: 2, ...preset },
+    onSubmit: (d) => {
+      const data = { ...d, ingredients: lines(d.ingredients), steps: lines(d.steps), servings: Math.max(1, Math.round(d.servings) || 1) };
+      if (recipe) Object.assign(recipe, data);
+      else {
+        const r = { id: uid(), favorite: false, ...data };
+        state.recipes.unshift(r);
+        location.hash = `#/recette/${r.id}`;
+      }
+      commit(recipe ? 'Recette modifiée ✓' : 'Recette ajoutée 🥗');
+    },
+    onDelete: recipe
+      ? () => {
+          state.recipes = state.recipes.filter((x) => x !== recipe);
+          for (const day of Object.values(state.mealPlan)) for (const m of Object.keys(day)) if (day[m] === recipe.id) delete day[m];
+          location.hash = '#/recettes';
+          commit('Recette supprimée');
+        }
+      : null,
+  });
+}
+
+function recipeCard(r) {
+  return `<a class="recipe-card" href="#/recette/${r.id}">
+    <div class="rc-img ${r.image ? '' : 'no-img'}" ${r.image ? `style="background-image:url('${esc(r.image)}')"` : ''}>${r.image ? '' : `<span>${esc(r.emoji || '🥗')}</span>`}${r.favorite ? '<i class="rc-fav">♥</i>' : ''}</div>
+    <div class="rc-body"><div class="t">${esc(r.title)}</div><div class="s">${r.time ? `⏱ ${r.time} min` : ''}${r.kcal ? ` · ≈${r.kcal} kcal` : ''}</div></div>
+  </a>`;
+}
+
+function weekStrip() {
+  const t = todayISO();
+  return `<div class="week-strip">${Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(t, i);
+    const plan = state.mealPlan[d] || {};
+    const meals = Object.keys(MEALS).filter((m) => plan[m] && recipeById(plan[m]));
+    return `<button class="day-col ${d === t ? 'today' : ''}" data-action="plan-day" data-date="${d}">
+      <span class="dn">${i === 0 ? "Auj." : esc(WEEKDAYS[parseISO(d).getDay()])}</span><span class="dd">${parseISO(d).getDate()}</span>
+      <span class="meals">${meals.map((m) => `<i title="${esc(MEALS[m])} : ${esc(recipeById(plan[m]).title)}">${esc(recipeById(plan[m]).emoji || '🍽️')}</i>`).join('') || '<i class="empty-meal">+</i>'}</span>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function recipeGridHTML() {
+  const f = ui.recipeFilter;
+  const q = ui.recipeSearch.toLowerCase();
+  const list = state.recipes.filter((r) => {
+    if (f === 'fav' && !r.favorite) return false;
+    if (RECIPE_CATEGORIES[f] && r.category !== f) return false;
+    if (RECIPE_TAGS.includes(f) && !(r.tags || []).includes(f)) return false;
+    if (q && !`${r.title} ${r.ingredients.join(' ')} ${(r.tags || []).join(' ')}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  return `${list.map(recipeCard).join('')}<button class="recipe-card add" data-action="add-recipe">${icon('plus')}<span>Nouvelle recette</span></button>${list.length ? '' : `<div class="empty" style="grid-column:1/-1">Aucune recette ne correspond.</div>`}`;
+}
+
+function viewRecipes() {
+  const f = ui.recipeFilter;
+  const chip = (k, l) => `<button class="chip ${f === k ? 'active' : ''}" data-action="recipe-filter" data-filter="${esc(k)}">${esc(l)}</button>`;
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Recettes saines</h1><div class="subtitle">Bien manger, sans prise de tête.</div></div>${backBtn('#/menu')}</div>
+  </header>
+  <section class="section">
+    ${secHead('📅 Mon menu de la semaine', 'data-action="week-shopping"', '🛒 Courses')}
+    ${weekStrip()}
+  </section>
+  <div class="section" style="margin-top:14px"><input class="input" type="search" placeholder="🔍 Chercher une recette, un ingrédient…" value="${esc(ui.recipeSearch)}" data-input="recipe-search" /></div>
+  <div class="chips" style="margin-top:6px">${chip('all', 'Toutes')}${chip('fav', '♥ Favoris')}${Object.entries(RECIPE_CATEGORIES).map(([k, l]) => chip(k, l)).join('')}${RECIPE_TAGS.map((tg) => chip(tg, tg)).join('')}</div>
+  <section class="section">
+    <div class="recipe-grid" id="recipe-grid">${recipeGridHTML()}</div>
+  </section>`;
+}
+
+function viewRecipe(id) {
+  const r = recipeById(id);
+  if (!r) return viewRecipes();
+  const n = ui.servings[r.id] || r.servings || 1;
+  const factor = n / (r.servings || 1);
+  const checked = ui.checkedIng[r.id] || {};
+  const planned = Object.entries(state.mealPlan)
+    .filter(([d, p]) => d >= todayISO() && Object.values(p).includes(r.id))
+    .map(([d, p]) => `${dayLabel(d)} (${MEALS[Object.keys(p).find((m) => p[m] === r.id)].toLowerCase()})`);
+  return `
+  <header class="recipe-hero ${r.image ? '' : 'no-img'}" ${r.image ? `style="background-image:url('${esc(r.image)}')"` : ''}>
+    <div class="between">${backBtn('#/recettes', true)}<div class="btn-row">
+      <button class="icon-btn ghost" data-action="recipe-fav" data-id="${r.id}" aria-label="Favori" style="color:${r.favorite ? '#ff2e8a' : '#fff'}">${r.favorite ? '♥' : '♡'}</button>
+      <button class="icon-btn ghost" data-action="edit-recipe" data-id="${r.id}" aria-label="Modifier">${icon('pencil')}</button></div></div>
+    ${r.image ? '' : `<div class="hero-emoji">${esc(r.emoji || '🥗')}</div>`}
+    <div><div class="small" style="opacity:.85">${esc(RECIPE_CATEGORIES[r.category] || '')}</div><h1 class="title" style="color:#fff">${esc(r.title)}</h1></div>
+  </header>
+  <div class="sheet">
+    <section class="section">
+      <div class="recipe-meta">
+        ${r.time ? `<span>⏱ ${r.time} min</span>` : ''}
+        ${r.kcal ? `<span>🔥 ≈${r.kcal} kcal / portion</span>` : ''}
+        ${(r.tags || []).map((tg) => `<span>${esc(tg)}</span>`).join('')}
+      </div>
+      ${planned.length ? `<div class="small muted mt">📅 Prévu : ${esc(planned.join(', '))}</div>` : ''}
+      <div class="btn-row mt">
+        <button class="btn pink sm" data-action="plan-recipe" data-id="${r.id}">📅 Planifier</button>
+        <button class="btn soft sm" data-action="recipe-shopping" data-id="${r.id}">🛒 Ajouter aux courses</button>
+        <button class="btn sm" data-action="cook-mode">🔆 Mode cuisine</button>
+        ${r.link ? `<a class="btn sm ghost" href="${esc(r.link)}" target="_blank" rel="noopener">${platformOf(r.link).emoji} Voir la vidéo</a>` : ''}
+      </div>
+
+      <div class="sec-head"><h2>Ingrédients</h2>
+        <div class="servings"><button class="icon-btn sm" data-action="servings" data-id="${r.id}" data-step="-1" aria-label="Moins">−</button><strong>${plural(n, 'portion')}</strong><button class="icon-btn sm" data-action="servings" data-id="${r.id}" data-step="1" aria-label="Plus">+</button></div>
+      </div>
+      <div class="card flush"><ul class="list">${r.ingredients
+        .map((ing, i) => `<li class="row ${checked[i] ? 'done' : ''}"><input type="checkbox" class="circle" data-action="check-ing" data-id="${r.id}" data-i="${i}" ${checked[i] ? 'checked' : ''} aria-label="Prêt" /><div class="grow t" style="font-weight:500">${esc(scaleLine(ing, factor))}</div></li>`)
+        .join('')}</ul>${r.ingredients.length ? '' : emptyMsg('Ajoute les ingrédients en modifiant la recette.')}</div>
+
+      ${secHead('Préparation')}
+      <ol class="steps">${r.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+      ${r.notes ? `${secHead('💡 Mes astuces')}<div class="card small" style="white-space:pre-wrap">${esc(r.notes)}</div>` : ''}
+    </section>
+  </div>`;
+}
+
+function planSheet(date, recipeId) {
+  const plan = state.mealPlan[date] || {};
+  const label = cap(fmtLongNoYear.format(parseISO(date)));
+  if (recipeId) {
+    // Choisir le jour et le repas pour une recette donnée.
+    const days = Array.from({ length: 7 }, (_, i) => addDays(todayISO(), i));
+    openSheet(
+      'Planifier 📅',
+      `<div class="plan-grid">${days
+        .map((d) => `<div class="plan-row"><span class="small"><strong>${esc(dayLabel(d))}</strong></span>${Object.entries(MEALS)
+          .map(([m, l]) => `<button class="chip ${state.mealPlan[d]?.[m] === recipeId ? 'active' : ''}" data-action="plan-set" data-date="${d}" data-meal="${m}" data-id="${recipeId}" data-back="recipe">${l}</button>`)
+          .join('')}</div>`)
+        .join('')}</div>`,
+    );
+    return;
+  }
+  openSheet(
+    `📅 ${label}`,
+    Object.entries(MEALS)
+      .map(([m, l]) => {
+        const cur = plan[m] && recipeById(plan[m]);
+        return `<div class="group-label">${l}${cur ? ` · ${esc(cur.emoji || '')} ${esc(cur.title)}` : ''}</div>
+        <div class="chips in-section" style="flex-wrap:wrap">${state.recipes
+          .filter((r) => (m === 'matin' ? ['matin', 'boisson', 'snack'] : ['midi', 'soir']).includes(r.category) || plan[m] === r.id)
+          .map((r) => `<button class="chip ${plan[m] === r.id ? 'active' : ''}" data-action="plan-set" data-date="${date}" data-meal="${m}" data-id="${r.id}">${esc(r.emoji || '')} ${esc(r.title)}</button>`)
+          .join('')}${cur ? `<button class="chip" data-action="plan-set" data-date="${date}" data-meal="${m}" data-id="">✕ Retirer</button>` : ''}</div>`;
+      })
+      .join('') + '<button class="btn pink block mt" data-action="close-sheet">Terminé ✦</button>',
+  );
+}
+
+// Ajoute des ingrédients à la liste de courses (sans doublon avec ce qui y est déjà).
+function addToShopping(entries) {
+  const existing = new Set(state.items.filter((i) => i.area === 'quotidien' && i.kind === 'courses' && !i.done).map((i) => i.title.toLowerCase()));
+  let added = 0;
+  for (const { line, from } of entries) {
+    if (existing.has(line.toLowerCase())) continue;
+    existing.add(line.toLowerCase());
+    state.items.push({ id: uid(), area: 'quotidien', kind: 'courses', title: line, date: '', time: '', done: false, status: '', notes: from ? `Pour : ${from}` : '' });
+    added++;
+  }
+  return added;
+}
+
+let wakeLock = null;
+async function toggleWakeLock() {
+  try {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+      return toast('Mode cuisine désactivé');
+    }
+    if (!('wakeLock' in navigator)) return toast('Ton navigateur ne peut pas garder l’écran allumé');
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+    });
+    toast('🔆 Mode cuisine : l’écran reste allumé');
+  } catch {
+    toast('Impossible de garder l’écran allumé');
+  }
+}
 /* ============================================================
    Collections (TikTok, Instagram, Pinterest…)
    ============================================================ */
@@ -2091,6 +2341,7 @@ function inspCard(it) {
       <div class="s">${trip ? `${esc(trip.emoji || '✈️')} ${esc(trip.destination)}` : esc(it.collection)}${it.author ? ` · @${esc(it.author)}` : ''}</div>
       <div class="btn-row" style="margin-top:6px">
         <button class="icon-btn sm" data-action="toggle-tried" data-id="${it.id}" aria-label="Testé">${it.tried ? '↺' : '✓'}</button>
+        ${/recette/i.test(it.collection) ? `<button class="icon-btn sm" data-action="insp-to-recipe" data-id="${it.id}" aria-label="Créer la recette" title="Créer la recette">🍽️</button>` : ''}
         <button class="icon-btn sm" data-action="edit-insp" data-id="${it.id}" aria-label="Modifier">${icon('pencil')}</button>
       </div>
     </div>
@@ -2157,6 +2408,7 @@ function viewMenu() {
       ${sc('#/priere', 'heart', 'Prière', 'lilac')}
       ${sc('#/inspirations', 'bookmark', 'Collections', 'pink')}
       ${sc('#/carte', 'plane', 'Ma carte', 'peach')}
+      ${sc('#/recettes', 'bowl', 'Recettes', 'pink')}
     </div>
     <div class="card flush mt"><ul class="list">
       <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="edit-profile"><div class="ico-box">${icon('user')}</div><div class="grow t">Mon profil</div><span style="color:var(--pink)">♥</span><span class="chev">${icon('right')}</span></button></li>
@@ -2399,6 +2651,8 @@ const ROUTES = {
   priere: viewPrayer,
   chapelet: viewRosary,
   carte: viewMap,
+  recettes: viewRecipes,
+  recette: viewRecipe,
   inspirations: viewInspirations,
 };
 const TAB_OF = { accueil: 'accueil', taches: 'taches', calendrier: 'calendrier' };
@@ -2416,6 +2670,10 @@ function render() {
   const splash = !state.settings.onboarded && name !== 'reglages';
   const view = $('#view');
   view.classList.toggle('bare', splash || name === 'chapelet' || name === 'carte');
+  if (name !== 'recette' && wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+  }
   if (name !== 'carte') {
     unmountMap();
     mapApi = null;
@@ -2730,6 +2988,68 @@ const actions = {
     render();
   },
 
+  // Recettes
+  'add-recipe': () => {
+    closeDialog();
+    recipeForm();
+  },
+  'edit-recipe': (el) => recipeForm(recipeById(el.dataset.id)),
+  'recipe-filter': (el) => {
+    ui.recipeFilter = el.dataset.filter;
+    render();
+  },
+  'recipe-fav': (el) => {
+    const r = recipeById(el.dataset.id);
+    r.favorite = !r.favorite;
+    commit(r.favorite ? 'Ajoutée aux favoris ♥' : null);
+  },
+  servings: (el) => {
+    const r = recipeById(el.dataset.id);
+    ui.servings[r.id] = clamp((ui.servings[r.id] || r.servings || 1) + Number(el.dataset.step), 1, 24);
+    render();
+  },
+  'check-ing': (el) => {
+    const m = (ui.checkedIng[el.dataset.id] ||= {});
+    m[el.dataset.i] = !m[el.dataset.i];
+    render();
+  },
+  'cook-mode': () => toggleWakeLock(),
+  'plan-day': (el) => planSheet(el.dataset.date),
+  'plan-recipe': (el) => planSheet(todayISO(), el.dataset.id),
+  'plan-set': (el) => {
+    const { date, meal, id, back } = el.dataset;
+    const day = (state.mealPlan[date] ||= {});
+    if (!id || day[meal] === id) delete day[meal];
+    else day[meal] = id;
+    if (!Object.keys(day).length) delete state.mealPlan[date];
+    commit();
+    if (back === 'recipe') planSheet(date, id);
+    else planSheet(date);
+  },
+  'recipe-shopping': (el) => {
+    const r = recipeById(el.dataset.id);
+    const factor = (ui.servings[r.id] || r.servings || 1) / (r.servings || 1);
+    const n = addToShopping(r.ingredients.map((line) => ({ line: scaleLine(line, factor), from: r.title })));
+    commit(n ? `🛒 ${plural(n, 'ingrédient ajouté', 'ingrédients ajoutés')} aux courses` : 'Tout est déjà dans ta liste 🛒');
+  },
+  'week-shopping': () => {
+    const entries = [];
+    for (let i = 0; i < 7; i++) {
+      const plan = state.mealPlan[addDays(todayISO(), i)] || {};
+      for (const id of Object.values(plan)) {
+        const r = recipeById(id);
+        if (r) entries.push(...r.ingredients.map((line) => ({ line, from: r.title })));
+      }
+    }
+    if (!entries.length) return toast('Planifie d’abord des repas cette semaine 📅');
+    const n = addToShopping(entries);
+    commit(n ? `🛒 ${plural(n, 'article ajouté', 'articles ajoutés')} à tes courses` : 'Ta liste de courses est déjà complète 🛒');
+  },
+  'insp-to-recipe': (el) => {
+    const it = findById(state.inspirations.items, el.dataset.id);
+    recipeForm(null, { title: it.title || '', link: it.url, notes: it.note || '', image: '' });
+  },
+
   // Carte
   'map-filter': (el) => {
     ui.mapFilter = el.dataset.filter;
@@ -2918,6 +3238,13 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     actions[e.target.dataset.action]?.(e.target, e);
   }
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.dataset?.input !== 'recipe-search') return;
+  ui.recipeSearch = e.target.value;
+  const grid = $('#recipe-grid');
+  if (grid) grid.innerHTML = recipeGridHTML();
 });
 
 document.addEventListener('change', (e) => {

@@ -1,0 +1,13 @@
+{
+  "name": "Marie Dashboard",
+  "short_name": "Marie",
+  "description": "Mon cockpit personnel : argent, travail, école, voyages et vie quotidienne.",
+  "lang": "fr",
+  "start_url": "./#/aujourdhui",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#b4532a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

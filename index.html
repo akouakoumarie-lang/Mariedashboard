@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Marie Dashboard</title>
+  <meta name="description" content="Mon cockpit personnel : argent, travail, école, voyages et vie quotidienne." />
+  <meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#16161a" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Marie" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <nav class="nav" id="nav" aria-label="Sections">
+      <a class="brand" href="#/aujourdhui">
+        <span class="brand-mark">M</span>
+        <span class="brand-name">Marie Dashboard</span>
+      </a>
+      <a href="#/aujourdhui" data-route="aujourdhui"><span class="ico">☀️</span><span>Aujourd'hui</span></a>
+      <a href="#/argent" data-route="argent"><span class="ico">💰</span><span>Argent</span></a>
+      <a href="#/travail" data-route="travail"><span class="ico">💼</span><span>Travail</span></a>
+      <a href="#/ecole" data-route="ecole"><span class="ico">🎓</span><span>École</span></a>
+      <a href="#/voyages" data-route="voyages"><span class="ico">✈️</span><span>Voyages</span></a>
+      <a href="#/quotidien" data-route="quotidien"><span class="ico">🏠</span><span>Quotidien</span></a>
+      <a href="#/reglages" data-route="reglages" class="nav-settings"><span class="ico">⚙️</span><span>Réglages</span></a>
+    </nav>
+    <main class="main" id="view" tabindex="-1"></main>
+  </div>
+  <dialog id="modal" class="modal"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

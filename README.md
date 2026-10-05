@@ -1,16 +1,20 @@
 # Marie Dashboard
 
-Mon cockpit personnel : toute ma vie au même endroit.
+*My life, organized.* ✦ Mon cockpit personnel, pensé comme une app de téléphone : glam rose & léopard, inspiration Bratz.
 
-- **☀️ Aujourd'hui** : tâches pro et école du jour, paiements à prévoir, routines (sport, courses…), budget restant, jours avant le prochain salaire, ce qui arrive dans les 7 prochains jours et à l'horizon (examens, voyages, revenus exceptionnels).
-- **💰 Argent** : salaire et CAF (reçu / attendu), revenus exceptionnels, loyers et charges mensuelles, dépenses du mois par catégorie, dettes, épargne, budget disponible jusqu'à la fin du mois (avec le détail du calcul).
-- **💼 Travail** : tâches Safran, projets, personnes à contacter, candidatures CDI, opportunités, formations, compétences (avec statuts).
-- **🎓 École** : devoirs, examens, rattrapages, échéances, TOEIC, documents importants.
-- **✈️ Voyages** : destination, dates, compte à rebours, budget prévu et dépensé, billets et hôtels, checklist, documents.
-- **🏠 Quotidien** : courses, démarches administratives, renouvellement de documents, rappels, routines, abonnements et factures.
-- **✨ Manifestation** : affirmation du jour (aussi en haut de la page Aujourd'hui), vision board avec photos, rêves « manifestés », 3 gratitudes par jour avec série de jours, liste d'affirmations personnalisable.
+- **Écran d'accueil** : MARIE DASHBOARD, avec ta photo en fond si tu en ajoutes une.
+- **Accueil** : bonjour + rappels 🔔, affirmation du jour, « Aujourd'hui » (choses à faire, échéances, prochain salaire, sport, gratitude), tuiles Money, Career, Travel et Goals.
+- **Tâches** : filtres Tout, Pro, École et Perso ; en retard, aujourd'hui (avec heures), cette semaine, plus tard.
+- **Calendrier** : le mois avec des pastilles, et l'agenda du jour choisi (tâches, routines, paiements, revenus, voyages).
+- **Argent** : solde disponible (masquable), revenus et dépenses du mois, prochains revenus, dépenses à venir, dépenses, épargne, dettes.
+- **Carrière** : objectif CDI avec avancement, candidatures, entretiens, formations, projets.
+- **École** : formation et avancement de l'année, échéances, cours et projets.
+- **Voyages** : prochain voyage en photo, budget, liste avec statuts ; pour chaque voyage, billets, hôtels, checklist et documents.
+- **Objectifs** : par domaine, avec barre d'avancement.
+- **Manifestation** : « Tu fais déjà un super travail ♥ », autocollants, affirmation du jour, gratitude, vision board avec photos.
+- **Menu** : profil avec photo, raccourcis vers tous les espaces, documents, paramètres, synchronisation.
 
-Le tout en **rose et léopard** 🐆💕, en mode clair ou sombre.
+Le bouton **+** au centre ajoute n'importe quoi : tâche, dépense, revenu, charge, objectif, voyage, routine, gratitude, document.
 
 ## Utilisation
 

@@ -3,10 +3,10 @@
   "short_name": "Marie",
   "description": "Mon cockpit personnel : argent, travail, école, voyages et vie quotidienne.",
   "lang": "fr",
-  "start_url": "./#/aujourdhui",
+  "start_url": "./#/accueil",
   "display": "standalone",
-  "background_color": "#fff1f6",
-  "theme_color": "#e0337a",
+  "background_color": "#17111a",
+  "theme_color": "#ff2e8a",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]

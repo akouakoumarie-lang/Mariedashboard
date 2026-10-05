@@ -1,5 +1,6 @@
-// Marie Dashboard — cockpit personnel.
-// Toutes les données sont stockées localement dans le navigateur (localStorage).
+// Marie Dashboard — « My life, organized. »
+// Application personnelle : les données sont stockées dans le navigateur
+// (localStorage) et peuvent être synchronisées via Supabase (cloud.js).
 
 import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig } from './cloud.js';
 
@@ -26,16 +27,22 @@ const addDays = (s, n) => {
 };
 const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 86400000);
 const lastDayOfMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
-// Date du jour `day` dans le mois donné (borné au dernier jour du mois).
 function dateInMonth(day, ym) {
   const [y, m] = ym.split('-').map(Number);
   return `${y}-${pad(m)}-${pad(Math.min(day, lastDayOfMonth(y, m - 1)))}`;
 }
-
-function nextMonthKey(ym) {
+function shiftMonth(ym, n) {
   const [y, m] = ym.split('-').map(Number);
-  return monthKey(new Date(y, m, 1));
+  return monthKey(new Date(y, m - 1 + n, 1));
+}
+// Prochaine date (cette année ou la suivante) pour un mois/jour donné.
+function nextDate(month, day) {
+  const now = new Date();
+  let d = new Date(now.getFullYear(), month - 1, day);
+  if (iso(d) < todayISO()) d = new Date(now.getFullYear() + 1, month - 1, day);
+  return iso(d);
 }
 
 function esc(s) {
@@ -45,109 +52,119 @@ function esc(s) {
 const eurFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const eur = (n) => eurFmt.format(Math.round((Number(n) || 0) * 100) / 100);
 const sum = (arr, f = (x) => x) => arr.reduce((acc, x) => acc + (Number(f(x)) || 0), 0);
+const plural = (n, one, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
 
-const dateLong = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-const dateShort = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
-const monthLong = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtLong = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const fmtLongNoYear = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const fmtShort = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+const fmtWeekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtMonth = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+const fmtMonthShort = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' });
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function fmtDate(s) {
-  return s ? dateShort.format(parseISO(s)) : '';
-}
+const fmtDate = (s) => (s ? fmtShort.format(parseISO(s)) : '');
+const fmtDayMonth = (s) => (s ? `${parseISO(s).getDate()}/${pad(parseISO(s).getMonth() + 1)}` : '');
 
-// « aujourd'hui », « demain », « dans 3 j », « il y a 2 j »
-function relDay(s) {
+// Libellé court d'une date : « Aujourd'hui », « Demain », « Jeu. 9 oct. », « 12 nov. »
+function dayLabel(s) {
   const d = daysBetween(todayISO(), s);
-  if (d === 0) return "aujourd'hui";
-  if (d === 1) return 'demain';
-  if (d === -1) return 'hier';
-  if (d > 1 && d < 7) return `dans ${d} j`;
-  if (d < 0) return `il y a ${-d} j`;
+  if (d === 0) return "Aujourd'hui";
+  if (d === 1) return 'Demain';
+  if (d === -1) return 'Hier';
+  if (d > 1 && d < 7) return cap(fmtWeekday.format(parseISO(s)));
   return fmtDate(s);
 }
-
 function inDays(n) {
   if (n === 0) return "aujourd'hui";
   if (n === 1) return 'demain';
   if (n < 0) return `en retard de ${-n} j`;
   return `dans ${n} jours`;
 }
+const fmtTime = (t) => (t ? t.replace(':', 'h').replace(/h00$/, 'h') : '');
 
 const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const icon = (name, cls = '') => `<svg class="i ${cls}"><use href="#i-${name}"/></svg>`;
 
 /* ============================================================
-   Configuration des espaces
+   Configuration
    ============================================================ */
 
 const AREAS = {
   travail: {
-    label: 'Travail & carrière',
-    emoji: '💼',
-    todayLabel: (n) => `${n} tâche${n > 1 ? 's' : ''} professionnelle${n > 1 ? 's' : ''}`,
+    label: 'Pro',
+    icon: 'briefcase',
     kinds: {
-      tache: { label: 'Tâche Safran', emoji: '✅' },
-      projet: { label: 'Projet en cours', emoji: '🧩', statuses: ['À démarrer', 'En cours', 'En pause', 'Terminé'] },
-      contact: { label: 'Personne à contacter', emoji: '📇' },
-      candidature: { label: 'Candidature CDI', emoji: '📨', statuses: ['À envoyer', 'Envoyée', 'Relancée', 'Entretien', 'Offre', 'Refus'] },
-      opportunite: { label: 'Opportunité', emoji: '🎯', statuses: ['Repérée', 'À creuser', 'En discussion', 'Abandonnée'] },
-      formation: { label: 'Formation', emoji: '📚', statuses: ['À faire', 'En cours', 'Terminée'] },
-      competence: { label: 'Compétence', emoji: '🌱', statuses: ['À développer', 'En progrès', 'Acquise'] },
+      tache: { label: 'Tâche pro', tag: 'Pro', emoji: '💼' },
+      projet: { label: 'Projet', tag: 'Projet', emoji: '🧩', statuses: ['À démarrer', 'En cours', 'En pause', 'Terminé'] },
+      candidature: { label: 'Candidature CDI', tag: 'Carrière', emoji: '📨', statuses: ['À envoyer', 'Envoyée', 'Relancée', 'Entretien', 'Offre', 'Refus'] },
+      contact: { label: 'Entretien / échange', tag: 'Carrière', emoji: '☕' },
+      opportunite: { label: 'Opportunité', tag: 'Carrière', emoji: '🎯', statuses: ['Repérée', 'À creuser', 'En discussion', 'Abandonnée'] },
+      formation: { label: 'Formation', tag: 'Carrière', emoji: '📚', statuses: ['À faire', 'En cours', 'Terminée'] },
+      competence: { label: 'Compétence', tag: 'Carrière', emoji: '🌱', statuses: ['À développer', 'En progrès', 'Acquise'] },
     },
   },
   ecole: {
     label: 'École',
-    emoji: '🎓',
-    todayLabel: (n) => `${n} tâche${n > 1 ? 's' : ''} école`,
+    icon: 'school',
     kinds: {
-      devoir: { label: 'Devoir', emoji: '📝' },
-      examen: { label: 'Examen', emoji: '🧪' },
-      rattrapage: { label: 'Rattrapage', emoji: '🔁' },
-      echeance: { label: 'Échéance', emoji: '⏳' },
-      toeic: { label: 'TOEIC', emoji: '🇬🇧' },
-      document: { label: 'Document important', emoji: '📄' },
+      devoir: { label: 'Devoir / rendu', tag: 'École', emoji: '📝' },
+      examen: { label: 'Examen', tag: 'Examen', emoji: '🧪' },
+      rattrapage: { label: 'Rattrapage', tag: 'École', emoji: '🔁' },
+      echeance: { label: 'Échéance', tag: 'École', emoji: '⏳' },
+      toeic: { label: 'TOEIC', tag: 'TOEIC', emoji: '🇬🇧' },
+      cours: { label: 'Cours / projet', tag: 'Cours', emoji: '📖', statuses: ['En cours', 'À rendre', 'Terminé'] },
+      document: { label: 'Document important', tag: 'Document', emoji: '📄' },
     },
   },
   quotidien: {
-    label: 'Vie quotidienne',
-    emoji: '🏠',
-    todayLabel: (n) => `${n} chose${n > 1 ? 's' : ''} du quotidien`,
+    label: 'Perso',
+    icon: 'heart',
     kinds: {
-      courses: { label: 'Courses', emoji: '🛒' },
-      demarche: { label: 'Démarche administrative', emoji: '🗂️' },
-      renouvellement: { label: 'Renouvellement de document', emoji: '🪪' },
-      rappel: { label: 'Rappel', emoji: '🔔' },
+      tache: { label: 'Tâche perso', tag: 'Perso', emoji: '🌸' },
+      courses: { label: 'Courses', tag: 'Perso', emoji: '🛒' },
+      demarche: { label: 'Démarche administrative', tag: 'Admin', emoji: '🗂️' },
+      renouvellement: { label: 'Renouvellement de document', tag: 'Admin', emoji: '🪪' },
+      rappel: { label: 'Rappel', tag: 'Perso', emoji: '🔔' },
     },
   },
 };
+const kindOf = (i) => AREAS[i.area]?.kinds[i.kind] || { label: i.kind, tag: AREAS[i.area]?.label || '', emoji: '•' };
 
 const BILL_CATEGORIES = { loyer: 'Loyer', facture: 'Facture', abonnement: 'Abonnement', credit: 'Crédit', autre: 'Autre' };
-const EXPENSE_CATEGORIES = ['Courses', 'Transport', 'Restaurants', 'Sorties', 'Shopping', 'Santé', 'Maison', 'Cadeaux', 'Voyage', 'Épargne', 'Remboursement', 'Autre'];
+const EXPENSE_CATEGORIES = ['Courses', 'Transport', 'Restaurants', 'Sorties', 'Shopping', 'Beauté', 'Santé', 'Maison', 'Cadeaux', 'Voyage', 'Épargne', 'Remboursement', 'Autre'];
 const INCOME_KINDS = { salaire: 'Salaire', caf: 'CAF', autre: 'Autre' };
-const TRIP_STATUSES = ['Envisagé', 'En préparation', 'Réservé', 'Terminé'];
+const TRIP_STATUSES = ['À planifier', 'À organiser', 'Planifié', 'Réservé', 'Terminé'];
+const TRIP_STATUS_CLASS = { 'À planifier': 'info', 'À organiser': 'warn', Planifié: 'good', Réservé: 'good', Terminé: 'muted' };
 const BOOKING_KINDS = { billet: '🎫 Billet', hotel: '🏨 Hôtel', activite: '🎟️ Activité', autre: '📦 Autre' };
+const DEFAULT_CHECKLIST = ["Pièce d'identité / passeport", 'Billets dans le téléphone', 'Réservation hôtel', 'Assurance voyage', 'Chargeur + adaptateur', 'Trousse beauté 💄', 'Prévenir la banque'];
 const DREAM_CATEGORIES = {
-  argent: '💰 Argent',
-  carriere: '💼 Carrière',
-  etudes: '🎓 Études',
-  voyages: '✈️ Voyages',
-  amour: '💕 Amour & relations',
-  bienetre: '🌸 Santé & bien-être',
-  maison: '🏠 Maison',
-  moi: '✨ Moi',
+  carriere: { label: 'Carrière', emoji: '💼' },
+  argent: { label: 'Argent', emoji: '💰' },
+  sante: { label: 'Santé', emoji: '💪' },
+  voyages: { label: 'Voyages', emoji: '✈️' },
+  etudes: { label: 'Études', emoji: '🎓' },
+  maison: { label: 'Maison', emoji: '🏠' },
+  amour: { label: 'Amour', emoji: '💕' },
+  moi: { label: 'Moi', emoji: '✨' },
 };
 const DEFAULT_AFFIRMATIONS = [
+  'Tu avances, même quand c’est discret. Et c’est déjà énorme.',
   'Je mérite tout ce que je désire.',
   "L'argent vient à moi facilement et en abondance.",
   'Mon CDI idéal est déjà en route vers moi.',
   'Je suis capable, brillante et déterminée.',
   'Chaque jour, je me rapproche de la vie dont je rêve.',
   'Je réussis mes examens avec confiance et sérénité.',
-  'Je suis reconnaissante pour tout ce que j’ai déjà.',
   'Les bonnes opportunités me trouvent naturellement.',
   'Je prends soin de mon corps, de mon esprit et de mon argent.',
   'Je voyage, je découvre, je vis pleinement.',
 ];
-const DEFAULT_CHECKLIST = ["Pièce d'identité / passeport", 'Billets imprimés ou dans le téléphone', 'Réservation hôtel', 'Assurance voyage', 'Chargeur + adaptateur', 'Médicaments', 'Prévenir la banque'];
+const STICKERS = [
+  ['Organisée', '-3deg'],
+  ['Ambitieuse', '2deg'],
+  ['Forte', '2deg'],
+  ['Inspirante', '-2deg'],
+];
 
 /* ============================================================
    Données
@@ -155,19 +172,19 @@ const DEFAULT_CHECKLIST = ["Pièce d'identité / passeport", 'Billets imprimés 
 
 function emptyState() {
   return {
-    version: 1,
-    settings: { name: 'Marie' },
+    version: 2,
+    settings: {
+      name: 'Marie',
+      tagline: 'Dream • Plan • Do • Repeat',
+      photo: '',
+      cover: '',
+      onboarded: false,
+      hideBalance: false,
+      school: { program: '', school: '', start: '', end: '' },
+    },
     items: [],
     routines: [],
-    money: {
-      recurringIncomes: [],
-      extraIncomes: [],
-      bills: [],
-      expenses: [],
-      debts: [],
-      savings: [],
-      carry: {},
-    },
+    money: { recurringIncomes: [], extraIncomes: [], bills: [], expenses: [], debts: [], savings: [], carry: {} },
     trips: [],
     manifest: {
       affirmations: DEFAULT_AFFIRMATIONS.map((text) => ({ id: uid(), text })),
@@ -177,120 +194,119 @@ function emptyState() {
   };
 }
 
-// Données d'exemple pour découvrir l'application (modifiables / supprimables).
+// Données d'exemple (modifiables ou à effacer dans Réglages).
 function sampleState() {
   const t = todayISO();
   const m = monthKey();
+  const dom = new Date().getDate();
   const s = emptyState();
-  const item = (area, kind, title, date = '', extra = {}) => ({ id: uid(), area, kind, title, date, done: false, notes: '', status: '', ...extra });
+  const item = (area, kind, title, date = '', time = '', extra = {}) => ({ id: uid(), area, kind, title, date, time, done: false, notes: '', status: '', ...extra });
 
   s.items = [
-    item('travail', 'tache', 'Préparer le point hebdo avec le tuteur', t),
-    item('travail', 'tache', 'Mettre à jour le tableau de suivi des essais', t),
-    item('travail', 'tache', 'Relire la doc technique du projet', addDays(t, 2)),
-    item('travail', 'projet', 'Projet amélioration continue', '', { status: 'En cours' }),
-    item('travail', 'contact', 'Recontacter la RH pour les postes CDI', addDays(t, 3)),
-    item('travail', 'candidature', 'Candidature CDI — ingénieure qualité', addDays(t, 5), { status: 'À envoyer' }),
-    item('travail', 'opportunite', 'Poste interne repéré sur l’intranet', '', { status: 'À creuser' }),
-    item('travail', 'formation', 'Formation Excel avancé / Power BI', '', { status: 'À faire' }),
-    item('travail', 'competence', 'Prise de parole en réunion', '', { status: 'En progrès' }),
-    item('ecole', 'devoir', 'Rendre le rapport de gestion de projet', t),
-    item('ecole', 'examen', 'Examen de finance', addDays(t, 9)),
-    item('ecole', 'toeic', 'Inscription au TOEIC', addDays(t, 12)),
-    item('ecole', 'rattrapage', 'Vérifier les dates de rattrapage', addDays(t, 20)),
-    item('ecole', 'document', 'Convention de stage signée', ''),
-    item('quotidien', 'courses', 'Lait, œufs, fruits', ''),
-    item('quotidien', 'courses', 'Lessive', ''),
-    item('quotidien', 'demarche', 'Envoyer le justificatif à la CAF', addDays(t, 4)),
-    item('quotidien', 'renouvellement', 'Renouveler le titre de séjour / la carte d’identité', addDays(t, 60)),
-    item('quotidien', 'rappel', 'Appeler maman', addDays(t, 1)),
+    item('travail', 'tache', 'Finaliser le dossier d’architecture générale', t, '09:00'),
+    item('travail', 'candidature', 'Rédiger 2 candidatures CDI', t, '14:00', { status: 'À envoyer' }),
+    item('quotidien', 'courses', 'Faire les courses', t, '17:00'),
+    item('ecole', 'devoir', 'Rendu FYC (dette technique)', addDays(t, 3)),
+    item('travail', 'contact', 'Appel avec ma manager', addDays(t, 4), '10:30'),
+    item('quotidien', 'renouvellement', 'Renouvellement titre de séjour', addDays(t, 8)),
+    item('travail', 'candidature', 'Candidature CDI — architecte SI', addDays(t, -6), '', { status: 'Envoyée', done: false }),
+    item('travail', 'candidature', 'Candidature CDI — urbaniste SI', addDays(t, -12), '', { status: 'Envoyée' }),
+    item('travail', 'candidature', 'Candidature — consultante SI', '', '', { status: 'Entretien' }),
+    item('travail', 'formation', 'TOGAF fondamentaux', '', '', { status: 'À faire' }),
+    item('travail', 'formation', 'Power BI', '', '', { status: 'En cours' }),
+    item('travail', 'formation', 'Prise de parole', '', '', { status: 'À faire' }),
+    item('travail', 'projet', 'Urbanisme SI — Safran', '', '', { status: 'En cours' }),
+    item('travail', 'projet', 'BMA + AI Labelling', '', '', { status: 'En cours' }),
+    item('travail', 'projet', 'SharePoint — CDE', '', '', { status: 'En cours' }),
+    item('ecole', 'rattrapage', 'Rattrapages', nextDate(12, 15), '', { notes: 'Avant le 15 décembre' }),
+    item('ecole', 'toeic', 'TOEIC', addDays(t, 30), '', { notes: 'Préparation — objectif 785+' }),
+    item('ecole', 'devoir', 'Dossier FYC', addDays(t, 15)),
+    item('ecole', 'cours', 'Dette technique', '', '', { status: 'En cours', notes: 'Pilotage managérial (sans code)' }),
+    item('ecole', 'cours', 'Cartographie SI', '', '', { status: 'À rendre' }),
+    item('quotidien', 'demarche', 'Envoyer le justificatif à la CAF', addDays(t, 2)),
   ];
 
-  const todayDow = new Date().getDay();
-  s.routines = [
-    { id: uid(), label: 'Sport', emoji: '🏋🏾‍♀️', days: [1, 3, 5, todayDow].filter((v, i, a) => a.indexOf(v) === i), log: {} },
-    { id: uid(), label: 'Courses', emoji: '🛒', days: [6, todayDow].filter((v, i, a) => a.indexOf(v) === i), log: {} },
-  ];
+  s.routines = [{ id: uid(), label: 'Séance Fitness Park', emoji: '🏋🏾‍♀️', time: '18:00', days: [...new Set([1, 3, 5, new Date().getDay()])], log: {} }];
 
   s.money.recurringIncomes = [
-    { id: uid(), label: 'Salaire Safran', kind: 'salaire', amount: 1450, day: 28, received: [] },
-    { id: uid(), label: 'CAF', kind: 'caf', amount: 180, day: 5, received: new Date().getDate() >= 5 ? [m] : [] },
+    { id: uid(), label: 'Salaire (alternance)', kind: 'salaire', amount: 1401, day: 15, received: dom >= 15 ? [m] : [] },
+    { id: uid(), label: 'CAF', kind: 'caf', amount: 347, day: 5, received: dom >= 5 ? [m] : [] },
   ];
-  s.money.extraIncomes = [
-    { id: uid(), label: 'Prime de fin d’année', amount: 400, date: addDays(t, 45), received: false },
-  ];
+  s.money.extraIncomes = [{ id: uid(), label: '13e mois', amount: 1401, date: nextDate(12, 15), received: false }];
   s.money.bills = [
-    { id: uid(), label: 'Loyer', category: 'loyer', amount: 520, day: 5, paid: new Date().getDate() >= 5 ? [m] : [] },
-    { id: uid(), label: 'Électricité', category: 'facture', amount: 45, day: new Date(Date.now() + 2 * 86400000).getDate(), paid: [] },
+    { id: uid(), label: 'Loyer', category: 'loyer', amount: 698, day: 15, paid: [] },
+    { id: uid(), label: 'Fitness Park', category: 'abonnement', amount: 28, day: clamp(dom + 1, 1, 28), paid: [] },
     { id: uid(), label: 'Forfait téléphone', category: 'abonnement', amount: 15, day: 12, paid: [] },
-    { id: uid(), label: 'Netflix', category: 'abonnement', amount: 8, day: 20, paid: [] },
-    { id: uid(), label: 'Abonnement salle de sport', category: 'abonnement', amount: 30, day: 1, paid: [m] },
+    { id: uid(), label: 'Électricité', category: 'facture', amount: 45, day: 20, paid: [] },
   ];
   s.money.expenses = [
-    { id: uid(), label: 'Courses Lidl', amount: 62.4, date: addDays(t, -3), category: 'Courses' },
+    { id: uid(), label: 'Courses', amount: 64.3, date: addDays(t, -2), category: 'Courses' },
     { id: uid(), label: 'Pass Navigo', amount: 88.8, date: dateInMonth(1, m), category: 'Transport' },
-    { id: uid(), label: 'Resto avec les copines', amount: 27, date: addDays(t, -1), category: 'Restaurants' },
+    { id: uid(), label: 'Brunch avec les filles', amount: 27, date: addDays(t, -1), category: 'Restaurants' },
   ].filter((e) => e.date.startsWith(m));
-  s.money.debts = [
-    { id: uid(), label: 'Prêt à rembourser à ma sœur', total: 300, remaining: 150 },
-  ];
+  s.money.debts = [{ id: uid(), label: 'Avance de ma sœur', total: 300, remaining: 150 }];
   s.money.savings = [
     { id: uid(), label: 'Épargne de précaution', amount: 650, goal: 1500 },
-    { id: uid(), label: 'Voyage été', amount: 120, goal: 800 },
+    { id: uid(), label: 'Voyage Suède', amount: 420, goal: 1200 },
   ];
-  s.money.carry[m] = 1100;
+  s.money.carry[m] = 900;
 
+  const sweden = nextDate(12, 12);
   s.trips = [
     {
-      id: uid(),
-      destination: 'Lisbonne',
-      start: addDays(t, 40),
-      end: addDays(t, 44),
-      status: 'En préparation',
-      budget: 600,
+      id: uid(), emoji: '🇸🇪', destination: 'Suède', start: sweden, end: addDays(sweden, 4), status: 'Planifié', budget: 1200, image: '',
       bookings: [
-        { id: uid(), kind: 'billet', label: 'Vol aller-retour', cost: 140, booked: true },
-        { id: uid(), kind: 'hotel', label: 'Airbnb Alfama — 4 nuits', cost: 220, booked: false },
+        { id: uid(), kind: 'billet', label: 'Vol Paris → Stockholm', cost: 180, booked: true },
+        { id: uid(), kind: 'hotel', label: 'Hôtel Gamla Stan — 4 nuits', cost: 240, booked: true },
       ],
-      checklist: DEFAULT_CHECKLIST.map((text, i) => ({ id: uid(), text, done: i === 0 })),
-      notes: 'Documents : carte d’identité, carte européenne d’assurance maladie.',
+      checklist: DEFAULT_CHECKLIST.map((text, i) => ({ id: uid(), text, done: i < 2 })),
+      notes: 'Prévoir des vêtements chauds ❄️',
     },
-    {
-      id: uid(),
-      destination: 'Abidjan',
-      start: '',
-      end: '',
-      status: 'Envisagé',
-      budget: 1200,
-      bookings: [],
-      checklist: [],
-      notes: 'Regarder les prix des billets pour les vacances.',
-    },
+    { id: uid(), emoji: '🇳🇱', destination: 'Rotterdam', start: nextDate(11, 14), end: nextDate(11, 16), status: 'À organiser', budget: 400, image: '', bookings: [], checklist: [], notes: '' },
+    { id: uid(), emoji: '🇬🇧', destination: 'London', start: nextDate(2, 13), end: nextDate(2, 15), status: 'À organiser', budget: 500, image: '', bookings: [], checklist: [], notes: '' },
+    { id: uid(), emoji: '🇧🇷', destination: 'Brésil', start: '', end: '', status: 'À planifier', budget: 2500, image: '', bookings: [], checklist: [], notes: 'Février ou avril 2027' },
   ];
+
+  s.settings.school = { program: 'Master 2 MCSI', school: 'ESGI', start: `${new Date().getFullYear() - (new Date().getMonth() < 8 ? 1 : 0)}-09-01`, end: '' };
+  s.settings.school.end = `${Number(s.settings.school.start.slice(0, 4)) + 1}-01-31`;
+
   s.manifest.dreams = [
-    { id: uid(), emoji: '💼', title: 'Décrocher mon CDI', category: 'carriere', date: addDays(t, 180), notes: 'Je me vois signer mon contrat, fière de moi.', image: '', manifested: false },
-    { id: uid(), emoji: '💰', title: '1 500 € d’épargne de précaution', category: 'argent', date: addDays(t, 120), notes: '', image: '', manifested: false },
-    { id: uid(), emoji: '✈️', title: 'Week-end à Lisbonne', category: 'voyages', date: addDays(t, 40), notes: '', image: '', manifested: false },
-    { id: uid(), emoji: '🇬🇧', title: '900+ au TOEIC', category: 'etudes', date: addDays(t, 60), notes: '', image: '', manifested: false },
-    { id: uid(), emoji: '🏠', title: 'Mon appartement à moi', category: 'maison', date: '', notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '💼', title: 'CDI — Janvier 2027', category: 'carriere', progress: 75, date: '2027-01-15', notes: 'Je me vois signer mon contrat, fière de moi.', image: '', manifested: false },
+    { id: uid(), emoji: '💰', title: '5 000 € / mois', category: 'argent', progress: 40, date: '', notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '💪', title: 'Fitness 3 fois par semaine', category: 'sante', progress: 30, date: '', notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '🇧🇷', title: 'Brésil', category: 'voyages', progress: 20, date: '', notes: '', image: '', manifested: false },
+    { id: uid(), emoji: '🏠', title: 'Nouveau logement', category: 'maison', progress: 15, date: '', notes: '', image: '', manifested: false },
   ];
   return s;
 }
+
+const LEGACY_TRIP_STATUS = { Envisagé: 'À planifier', 'En préparation': 'À organiser' };
+const LEGACY_DREAM_CATEGORY = { bienetre: 'sante' };
 
 function normalize(data) {
   const base = emptyState();
   const out = { ...base, ...data };
   out.settings = { ...base.settings, ...(data.settings || {}) };
+  out.settings.school = { ...base.settings.school, ...(data.settings?.school || {}) };
   out.money = { ...base.money, ...(data.money || {}) };
   out.manifest = { ...base.manifest, ...(data.manifest || {}) };
   for (const k of ['items', 'routines', 'trips']) if (!Array.isArray(out[k])) out[k] = [];
+  out.items = out.items.map((i) => ({ time: '', status: '', notes: '', ...i }));
+  out.routines = out.routines.map((r) => ({ time: '', log: {}, days: [], ...r }));
+  out.trips = out.trips.map((tr) => ({ emoji: '✈️', image: '', bookings: [], checklist: [], notes: '', ...tr, status: LEGACY_TRIP_STATUS[tr.status] || tr.status || 'À planifier' }));
+  out.manifest.dreams = out.manifest.dreams.map((d) => ({ progress: d.manifested ? 100 : 0, ...d, category: LEGACY_DREAM_CATEGORY[d.category] || d.category || 'moi' }));
   return out;
 }
 
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return normalize(JSON.parse(raw));
+    if (raw) {
+      const data = JSON.parse(raw);
+      // Les personnes qui utilisaient déjà l'app n'ont pas besoin de l'écran d'accueil.
+      if (data.settings && data.settings.onboarded === undefined) data.settings.onboarded = true;
+      return normalize(data);
+    }
   } catch (e) {
     console.warn('Lecture des données impossible', e);
   }
@@ -298,13 +314,22 @@ function load() {
 }
 
 let state = load();
-const ui = { filters: {}, showDone: {}, openTrips: new Set(), affShift: 0 };
+const ui = {
+  taskFilter: 'all',
+  showDone: false,
+  areaFilter: {},
+  goalFilter: 'all',
+  calMonth: monthKey(),
+  calDay: todayISO(),
+  affShift: 0,
+  editCloudConfig: false,
+};
 
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    toast('⚠️ Sauvegarde impossible sur cet appareil');
+  } catch {
+    toast('⚠️ Stockage plein : retire quelques photos');
   }
 }
 
@@ -322,7 +347,7 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
 /* ============================================================
@@ -330,31 +355,24 @@ function toast(msg) {
    ============================================================ */
 
 const findById = (arr, id) => arr.find((x) => x.id === id);
+const itemsFor = (area) => state.items.filter((i) => i.area === area);
+const byDateTime = (a, b) => (a.date || '9999').localeCompare(b.date || '9999') || (a.time || '99').localeCompare(b.time || '99');
 
-function itemsFor(area) {
-  return state.items.filter((i) => i.area === area);
-}
-
-// Éléments à traiter aujourd'hui (échéance aujourd'hui ou dépassée).
 function dueNow(area) {
   const t = todayISO();
-  return itemsFor(area).filter((i) => !i.done && i.date && i.date <= t);
+  return state.items.filter((i) => (!area || i.area === area) && !i.done && i.date && i.date <= t);
 }
 
-function routinesToday() {
-  const dow = new Date().getDay();
-  return state.routines.filter((r) => r.days.includes(dow));
-}
+const routinesOn = (date) => state.routines.filter((r) => r.days.includes(parseISO(date).getDay()));
 
-// Prochaine échéance non réglée d'une charge mensuelle.
 function billNextDue(bill) {
   const m = monthKey();
   if (!bill.paid.includes(m)) return { date: dateInMonth(bill.day, m), month: m };
-  const n = nextMonthKey(m);
+  const n = shiftMonth(m, 1);
   return { date: dateInMonth(bill.day, n), month: n };
 }
 
-function billsDueWithin(days) {
+function upcomingBills(days = 10) {
   const limit = addDays(todayISO(), days);
   return state.money.bills
     .map((b) => ({ bill: b, ...billNextDue(b) }))
@@ -364,42 +382,94 @@ function billsDueWithin(days) {
 
 function incomeNextDate(inc) {
   const m = monthKey();
-  if (!inc.received.includes(m)) return dateInMonth(inc.day, m);
-  return dateInMonth(inc.day, nextMonthKey(m));
+  return inc.received.includes(m) ? dateInMonth(inc.day, shiftMonth(m, 1)) : dateInMonth(inc.day, m);
 }
 
 function nextSalary() {
-  const salaries = state.money.recurringIncomes.filter((i) => i.kind === 'salaire');
-  if (!salaries.length) return null;
-  const next = salaries.map((s) => ({ inc: s, date: incomeNextDate(s) })).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const list = state.money.recurringIncomes.filter((i) => i.kind === 'salaire');
+  if (!list.length) return null;
+  const next = list.map((inc) => ({ inc, date: incomeNextDate(inc) })).sort((a, b) => a.date.localeCompare(b.date))[0];
   return { ...next, days: daysBetween(todayISO(), next.date) };
 }
 
 function monthBudget(m = monthKey()) {
   const money = state.money;
   const carry = Number(money.carry[m]) || 0;
-  const recurringIn = sum(money.recurringIncomes.filter((i) => i.received.includes(m)), (i) => i.amount);
-  const extraIn = sum(money.extraIncomes.filter((i) => i.received && i.date.startsWith(m)), (i) => i.amount);
-  const income = recurringIn + extraIn;
+  const income =
+    sum(money.recurringIncomes.filter((i) => i.received.includes(m)), (i) => i.amount) +
+    sum(money.extraIncomes.filter((i) => i.received && (i.date || '').startsWith(m)), (i) => i.amount);
   const charges = sum(money.bills, (b) => b.amount);
   const chargesPaid = sum(money.bills.filter((b) => b.paid.includes(m)), (b) => b.amount);
   const expenses = sum(money.expenses.filter((e) => e.date.startsWith(m)), (e) => e.amount);
   const expected =
     sum(money.recurringIncomes.filter((i) => !i.received.includes(m)), (i) => i.amount) +
-    sum(money.extraIncomes.filter((i) => !i.received && i.date.startsWith(m)), (i) => i.amount);
+    sum(money.extraIncomes.filter((i) => !i.received && (i.date || '').startsWith(m)), (i) => i.amount);
   const remaining = carry + income - charges - expenses;
   const [y, mo] = m.split('-').map(Number);
   const daysLeft = m === monthKey() ? lastDayOfMonth(y, mo - 1) - new Date().getDate() + 1 : 0;
-  return { carry, income, charges, chargesPaid, chargesLeft: charges - chargesPaid, expenses, expected, remaining, daysLeft };
+  return { carry, income, charges, chargesPaid, chargesLeft: charges - chargesPaid, expenses, spent: charges + expenses, expected, remaining, daysLeft };
 }
 
-function upcomingExtraIncomes() {
-  return state.money.extraIncomes.filter((i) => !i.received).sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+function nextTrip() {
+  const t = todayISO();
+  const active = state.trips.filter((tr) => tr.status !== 'Terminé');
+  return active.filter((tr) => tr.start && tr.end >= t).sort((a, b) => a.start.localeCompare(b.start))[0] || active[0] || null;
+}
+const tripSpent = (tr) => sum(tr.bookings, (b) => b.cost);
+
+function topGoal(category) {
+  return state.manifest.dreams
+    .filter((d) => !d.manifested && (!category || d.category === category))
+    .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || b.progress - a.progress)[0];
+}
+
+function schoolProgress() {
+  const { start, end } = state.settings.school;
+  if (!start || !end) return null;
+  const total = daysBetween(start, end);
+  if (total <= 0) return null;
+  return clamp(Math.round((daysBetween(start, todayISO()) / total) * 100), 0, 100);
+}
+
+function affirmationOfDay() {
+  const list = state.manifest.affirmations;
+  if (!list.length) return null;
+  const dayNumber = Math.floor(parseISO(todayISO()).getTime() / 86400000);
+  return list[(((dayNumber + ui.affShift) % list.length) + list.length) % list.length];
+}
+
+function gratitudeStreak() {
+  const has = (day) => (state.manifest.gratitude[day] || []).some((x) => x.trim());
+  let d = todayISO();
+  if (!has(d)) d = addDays(d, -1);
+  let n = 0;
+  while (has(d)) {
+    n++;
+    d = addDays(d, -1);
+  }
+  return n;
+}
+
+function alerts() {
+  const t = todayISO();
+  const late = state.items.filter((i) => !i.done && i.date && i.date < t);
+  const bills = upcomingBills(3);
+  return { late, bills, count: late.length + bills.length };
 }
 
 /* ============================================================
-   Formulaires (modale)
+   Formulaires (feuille du bas)
    ============================================================ */
+
+function optionsHTML(options, v) {
+  return options
+    .map((o) =>
+      o.group
+        ? `<optgroup label="${esc(o.group)}">${optionsHTML(o.options, v)}</optgroup>`
+        : `<option value="${esc(o[0])}" ${String(o[0]) === String(v) ? 'selected' : ''}>${esc(o[1])}</option>`,
+    )
+    .join('');
+}
 
 function fieldHTML(f, value) {
   const v = value ?? f.default ?? '';
@@ -409,11 +479,11 @@ function fieldHTML(f, value) {
     case 'textarea':
       return `<label class="field">${label}<textarea name="${f.name}" placeholder="${esc(f.placeholder || '')}">${esc(v)}</textarea></label>`;
     case 'select':
-      return `<label class="field">${label}<select name="${f.name}" ${req}>${f.options
-        .map(([val, text]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(text)}</option>`)
-        .join('')}</select></label>`;
+      return `<label class="field">${label}<select name="${f.name}">${optionsHTML(f.options, v)}</select></label>`;
     case 'checkbox':
-      return `<label class="field field-check"><input type="checkbox" class="check" name="${f.name}" ${v ? 'checked' : ''}/>${esc(f.label)}</label>`;
+      return `<label class="field field-check"><input type="checkbox" class="circle" name="${f.name}" ${v ? 'checked' : ''}/>${esc(f.label)}</label>`;
+    case 'range':
+      return `<label class="field">${label.replace('</span>', ` · <output>${Number(v) || 0} %</output></span>`)}<input type="range" name="${f.name}" min="0" max="100" step="5" value="${Number(v) || 0}" oninput="this.previousElementSibling.querySelector('output').textContent=this.value+' %'"/></label>`;
     case 'days':
       return `<div class="field">${label}<div class="days">${[1, 2, 3, 4, 5, 6, 0]
         .map((d) => `<label><input type="checkbox" name="${f.name}" value="${d}" ${(v || []).includes(d) ? 'checked' : ''}/>${WEEKDAYS[d]}</label>`)
@@ -422,30 +492,30 @@ function fieldHTML(f, value) {
       return `<div class="field">${label}
         <img class="preview-img" data-preview="${f.name}" src="${esc(v)}" alt="" ${v ? '' : 'hidden'} />
         <input type="hidden" name="${f.name}" value="${esc(v)}" />
-        <div class="head-actions">
-          <label class="btn small">📷 Choisir une photo<input type="file" accept="image/*" data-image-for="${f.name}" hidden /></label>
-          <button type="button" class="btn small ghost" data-clear-image="${f.name}">Retirer</button>
+        <div class="btn-row">
+          <label class="btn sm soft">📷 Choisir une photo<input type="file" accept="image/*" data-image-for="${f.name}" data-max="${f.max || 720}" hidden /></label>
+          <button type="button" class="btn sm ghost" data-clear-image="${f.name}">Retirer</button>
         </div></div>`;
     case 'number':
       return `<label class="field">${label}<input type="text" inputmode="decimal" name="${f.name}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${req}/></label>`;
     default:
-      return `<label class="field">${label}<input type="${f.type || 'text'}" name="${f.name}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${req} ${f.type === 'number' ? 'step="any"' : ''}/></label>`;
+      return `<label class="field">${label}<input type="${f.type || 'text'}" name="${f.name}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${req}/></label>`;
   }
 }
 
 function readForm(form, fields) {
   const data = {};
   for (const f of fields) {
-    if (f.type === 'checkbox') data[f.name] = form.elements[f.name].checked;
+    const el = form.elements[f.name];
+    if (f.type === 'checkbox') data[f.name] = el.checked;
     else if (f.type === 'days') data[f.name] = [...form.querySelectorAll(`input[name="${f.name}"]:checked`)].map((i) => Number(i.value));
-    else if (f.type === 'number') data[f.name] = parseFloat(String(form.elements[f.name].value).replace(/\s/g, '').replace(',', '.')) || 0;
-    else data[f.name] = form.elements[f.name].value.trim();
+    else if (f.type === 'number' || f.type === 'range') data[f.name] = parseFloat(String(el.value).replace(/\s/g, '').replace(',', '.')) || 0;
+    else data[f.name] = el.value.trim();
   }
   return data;
 }
 
-// Réduit une photo (max 640 px) pour qu'elle tienne dans le stockage local.
-function resizeImage(file, max = 640) {
+function resizeImage(file, max = 720) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -456,7 +526,7 @@ function resizeImage(file, max = 640) {
       canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.78));
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
@@ -466,18 +536,25 @@ function resizeImage(file, max = 640) {
   });
 }
 
-function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onSubmit, onDelete }) {
+function showDialog(html) {
   const dlg = $('#modal');
-  dlg.innerHTML = `<form class="modal-form" novalidate>
+  dlg.innerHTML = html;
+  if (!dlg.open) dlg.showModal();
+  return dlg;
+}
+const closeDialog = () => $('#modal').open && $('#modal').close();
+
+function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onSubmit, onDelete }) {
+  const dlg = showDialog(`<form class="modal-form" novalidate>
     <h2>${esc(title)}</h2>
     ${fields.map((f) => fieldHTML(f, values[f.name])).join('')}
     <div class="modal-actions">
-      ${onDelete ? '<button type="button" class="btn danger" data-del>Supprimer</button>' : ''}
+      ${onDelete ? '<button type="button" class="btn danger sm" data-del>Supprimer</button>' : ''}
       <span class="spacer"></span>
       <button type="button" class="btn ghost" data-cancel>Annuler</button>
-      <button type="submit" class="btn primary">${esc(submitLabel)}</button>
+      <button type="submit" class="btn pink">${esc(submitLabel)}</button>
     </div>
-  </form>`;
+  </form>`);
   const form = $('form', dlg);
   const setImage = (name, url) => {
     form.elements[name].value = url;
@@ -489,13 +566,13 @@ function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onS
     input.addEventListener('change', async () => {
       if (!input.files?.[0]) return;
       try {
-        setImage(input.dataset.imageFor, await resizeImage(input.files[0]));
+        setImage(input.dataset.imageFor, await resizeImage(input.files[0], Number(input.dataset.max)));
       } catch {
         toast('⚠️ Image illisible');
       }
     }),
   );
-  form.querySelectorAll('[data-clear-image]').forEach((btn) => btn.addEventListener('click', () => setImage(btn.dataset.clearImage, '')));
+  form.querySelectorAll('[data-clear-image]').forEach((b) => b.addEventListener('click', () => setImage(b.dataset.clearImage, '')));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const missing = fields.find((f) => f.required && !String(form.elements[f.name].value).trim());
@@ -504,51 +581,64 @@ function openForm({ title, fields, values = {}, submitLabel = 'Enregistrer', onS
       toast(`« ${missing.label} » est obligatoire`);
       return;
     }
-    onSubmit(readForm(form, fields));
     dlg.close();
+    onSubmit(readForm(form, fields));
   });
   $('[data-cancel]', dlg).addEventListener('click', () => dlg.close());
-  const del = $('[data-del]', dlg);
-  if (del) {
-    del.addEventListener('click', () => {
-      if (confirm('Supprimer cet élément ?')) {
-        onDelete();
-        dlg.close();
-      }
-    });
-  }
-  dlg.showModal();
-  const first = form.querySelector('input:not([type="checkbox"]), textarea, select');
+  $('[data-del]', dlg)?.addEventListener('click', () => {
+    if (confirm('Supprimer cet élément ?')) {
+      dlg.close();
+      onDelete();
+    }
+  });
+  const first = form.querySelector('input:not([type="checkbox"]):not([type="hidden"]):not([type="file"]), textarea');
   if (first && window.matchMedia('(pointer: fine)').matches) first.focus();
+}
+
+function openSheet(title, body) {
+  showDialog(`<div class="modal-form">
+    <div class="between"><h2>${esc(title)}</h2><button class="icon-btn sm" data-action="close-sheet" aria-label="Fermer">${icon('x')}</button></div>
+    ${body}
+  </div>`);
 }
 
 /* ---------- Formulaires métier ---------- */
 
-function itemForm(area, item, presetKind) {
-  const cfg = AREAS[area];
-  const kind = item?.kind || presetKind || Object.keys(cfg.kinds)[0];
-  const kindOptions = Object.entries(cfg.kinds).map(([k, v]) => [k, `${v.emoji} ${v.label}`]);
-  const allStatuses = [...new Set(Object.values(cfg.kinds).flatMap((k) => k.statuses || []))];
+function itemForm(item, preset = {}) {
+  const area = item?.area || preset.area || 'travail';
+  const kind = item?.kind || preset.kind || 'tache';
+  const statuses = AREAS[area].kinds[kind]?.statuses;
   const fields = [
-    { name: 'title', label: 'Intitulé', required: true, placeholder: 'Ex. : Préparer la réunion' },
-    { name: 'kind', label: 'Type', type: 'select', options: kindOptions },
-    { name: 'date', label: 'Date / échéance', type: 'date' },
+    { name: 'title', label: 'Intitulé', required: true, placeholder: 'Ex. : Finaliser le dossier' },
+    {
+      name: 'cat',
+      label: 'Catégorie',
+      type: 'select',
+      options: Object.entries(AREAS).map(([a, cfg]) => ({ group: cfg.label, options: Object.entries(cfg.kinds).map(([k, v]) => [`${a}:${k}`, `${v.emoji} ${v.label}`]) })),
+    },
+    { name: 'date', label: 'Date', type: 'date' },
+    { name: 'time', label: 'Heure (optionnel)', type: 'time' },
   ];
-  if (allStatuses.length) fields.push({ name: 'status', label: 'Statut (optionnel)', type: 'select', options: [['', '—'], ...allStatuses.map((s) => [s, s])] });
+  if (statuses || item?.status) fields.push({ name: 'status', label: 'Statut', type: 'select', options: [['', '—'], ...(statuses || [item.status]).map((s) => [s, s])] });
   fields.push({ name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Détails, liens, contacts…' });
   openForm({
-    title: item ? 'Modifier' : `Ajouter — ${cfg.label}`,
+    title: item ? 'Modifier' : 'Nouvelle tâche',
     fields,
-    values: item || { kind },
+    values: { ...(item || { date: preset.date ?? todayISO() }), cat: `${area}:${kind}` },
     onSubmit: (d) => {
-      if (item) Object.assign(item, d);
-      else state.items.push({ id: uid(), area, done: false, ...d });
-      commit(item ? 'Modifié ✓' : 'Ajouté ✓');
+      const [a, k] = d.cat.split(':');
+      delete d.cat;
+      const data = { ...d, area: a, kind: k };
+      if (item) Object.assign(item, data);
+      else state.items.push({ id: uid(), done: false, status: '', ...data });
+      commit(item ? 'Modifié ✓' : 'Ajouté ✦');
     },
-    onDelete: item ? () => {
-      state.items = state.items.filter((i) => i !== item);
-      commit('Supprimé');
-    } : null,
+    onDelete: item
+      ? () => {
+          state.items = state.items.filter((i) => i !== item);
+          commit('Supprimé');
+        }
+      : null,
   });
 }
 
@@ -557,73 +647,90 @@ function routineForm(r) {
     title: r ? 'Modifier la routine' : 'Nouvelle routine',
     fields: [
       { name: 'emoji', label: 'Emoji', placeholder: '🏋🏾‍♀️' },
-      { name: 'label', label: 'Nom', required: true, placeholder: 'Sport, Courses, Lecture…' },
+      { name: 'label', label: 'Nom', required: true, placeholder: 'Sport, lecture, skincare…' },
+      { name: 'time', label: 'Heure', type: 'time' },
       { name: 'days', label: 'Jours', type: 'days' },
     ],
     values: r || { emoji: '✨', days: [1, 2, 3, 4, 5] },
     onSubmit: (d) => {
       if (r) Object.assign(r, d);
       else state.routines.push({ id: uid(), log: {}, ...d });
-      commit('Routine enregistrée ✓');
+      commit('Routine enregistrée ✦');
     },
-    onDelete: r ? () => {
-      state.routines = state.routines.filter((x) => x !== r);
-      commit('Routine supprimée');
-    } : null,
+    onDelete: r
+      ? () => {
+          state.routines = state.routines.filter((x) => x !== r);
+          commit('Routine supprimée');
+        }
+      : null,
   });
 }
 
 function billForm(b, presetCategory) {
+  const m = monthKey();
   openForm({
     title: b ? 'Modifier la charge' : 'Nouvelle charge mensuelle',
     fields: [
-      { name: 'label', label: 'Libellé', required: true, placeholder: 'Loyer, électricité, Spotify…' },
+      { name: 'label', label: 'Libellé', required: true, placeholder: 'Loyer, électricité, Netflix…' },
       { name: 'category', label: 'Catégorie', type: 'select', options: Object.entries(BILL_CATEGORIES) },
       { name: 'amount', label: 'Montant (€)', type: 'number', required: true },
       { name: 'day', label: 'Jour du prélèvement (1–31)', type: 'number', required: true },
+      { name: 'paidNow', label: 'Déjà payé ce mois-ci', type: 'checkbox' },
     ],
-    values: b || { category: presetCategory || 'facture', day: 5 },
+    values: b ? { ...b, paidNow: b.paid.includes(m) } : { category: presetCategory || 'facture', day: 5 },
     onSubmit: (d) => {
-      d.day = Math.min(31, Math.max(1, Math.round(d.day)));
-      if (b) Object.assign(b, d);
-      else state.money.bills.push({ id: uid(), paid: [], ...d });
+      const { paidNow, ...rest } = d;
+      rest.day = clamp(Math.round(rest.day), 1, 31);
+      const target = b || { id: uid(), paid: [] };
+      Object.assign(target, rest);
+      target.paid = paidNow ? [...new Set([...target.paid, m])] : target.paid.filter((x) => x !== m);
+      if (!b) state.money.bills.push(target);
       commit('Charge enregistrée ✓');
     },
-    onDelete: b ? () => {
-      state.money.bills = state.money.bills.filter((x) => x !== b);
-      commit('Charge supprimée');
-    } : null,
+    onDelete: b
+      ? () => {
+          state.money.bills = state.money.bills.filter((x) => x !== b);
+          commit('Charge supprimée');
+        }
+      : null,
   });
 }
 
 function recurringIncomeForm(inc) {
+  const m = monthKey();
   openForm({
     title: inc ? 'Modifier le revenu' : 'Nouveau revenu régulier',
     fields: [
       { name: 'label', label: 'Libellé', required: true, placeholder: 'Salaire, CAF…' },
       { name: 'kind', label: 'Type', type: 'select', options: Object.entries(INCOME_KINDS) },
       { name: 'amount', label: 'Montant (€)', type: 'number', required: true },
-      { name: 'day', label: 'Jour de versement habituel (1–31)', type: 'number', required: true },
+      { name: 'day', label: 'Jour de versement (1–31)', type: 'number', required: true },
+      { name: 'gotNow', label: 'Reçu ce mois-ci', type: 'checkbox' },
     ],
-    values: inc || { kind: 'salaire', day: 28 },
+    values: inc ? { ...inc, gotNow: inc.received.includes(m) } : { kind: 'salaire', day: 28 },
     onSubmit: (d) => {
-      d.day = Math.min(31, Math.max(1, Math.round(d.day)));
-      if (inc) Object.assign(inc, d);
-      else state.money.recurringIncomes.push({ id: uid(), received: [], ...d });
+      const { gotNow, ...rest } = d;
+      rest.day = clamp(Math.round(rest.day), 1, 31);
+      const target = inc || { id: uid(), received: [] };
+      Object.assign(target, rest);
+      target.received = gotNow ? [...new Set([...target.received, m])] : target.received.filter((x) => x !== m);
+      if (!inc) state.money.recurringIncomes.push(target);
       commit('Revenu enregistré ✓');
     },
-    onDelete: inc ? () => {
-      state.money.recurringIncomes = state.money.recurringIncomes.filter((x) => x !== inc);
-      commit('Revenu supprimé');
-    } : null,
+    onDelete: inc
+      ? () => {
+          state.money.recurringIncomes = state.money.recurringIncomes.filter((x) => x !== inc);
+          commit('Revenu supprimé');
+        }
+      : null,
   });
 }
 
 function extraIncomeForm(inc) {
   openForm({
-    title: inc ? 'Modifier le revenu exceptionnel' : 'Revenu exceptionnel',
+    title: inc ? 'Modifier le revenu' : 'Revenu exceptionnel',
     fields: [
-      { name: 'label', label: 'Libellé', required: true, placeholder: 'Prime, remboursement, vente…' },
+      { name: 'label', label: 'Libellé', required: true, placeholder: 'Prime, 13e mois, remboursement…' },
       { name: 'amount', label: 'Montant (€)', type: 'number', required: true },
       { name: 'date', label: 'Date prévue', type: 'date', required: true },
       { name: 'received', label: 'Déjà reçu', type: 'checkbox' },
@@ -634,10 +741,12 @@ function extraIncomeForm(inc) {
       else state.money.extraIncomes.push({ id: uid(), ...d });
       commit('Enregistré ✓');
     },
-    onDelete: inc ? () => {
-      state.money.extraIncomes = state.money.extraIncomes.filter((x) => x !== inc);
-      commit('Supprimé');
-    } : null,
+    onDelete: inc
+      ? () => {
+          state.money.extraIncomes = state.money.extraIncomes.filter((x) => x !== inc);
+          commit('Supprimé');
+        }
+      : null,
   });
 }
 
@@ -654,12 +763,14 @@ function expenseForm(e) {
     onSubmit: (d) => {
       if (e) Object.assign(e, d);
       else state.money.expenses.push({ id: uid(), ...d });
-      commit(e ? 'Dépense modifiée ✓' : `Dépense de ${eur(d.amount)} ajoutée`);
+      commit(e ? 'Dépense modifiée ✓' : `− ${eur(d.amount)} noté`);
     },
-    onDelete: e ? () => {
-      state.money.expenses = state.money.expenses.filter((x) => x !== e);
-      commit('Dépense supprimée');
-    } : null,
+    onDelete: e
+      ? () => {
+          state.money.expenses = state.money.expenses.filter((x) => x !== e);
+          commit('Dépense supprimée');
+        }
+      : null,
   });
 }
 
@@ -667,7 +778,7 @@ function debtForm(d0) {
   openForm({
     title: d0 ? 'Modifier la dette' : 'Nouvelle dette',
     fields: [
-      { name: 'label', label: 'Libellé', required: true, placeholder: 'Prêt étudiant, avance d’une amie…' },
+      { name: 'label', label: 'Libellé', required: true, placeholder: 'Prêt étudiant, avance…' },
       { name: 'total', label: 'Montant total (€)', type: 'number', required: true },
       { name: 'remaining', label: 'Reste à rembourser (€)', type: 'number', required: true },
     ],
@@ -677,16 +788,18 @@ function debtForm(d0) {
       else state.money.debts.push({ id: uid(), ...d });
       commit('Dette enregistrée ✓');
     },
-    onDelete: d0 ? () => {
-      state.money.debts = state.money.debts.filter((x) => x !== d0);
-      commit('Dette supprimée');
-    } : null,
+    onDelete: d0
+      ? () => {
+          state.money.debts = state.money.debts.filter((x) => x !== d0);
+          commit('Dette supprimée');
+        }
+      : null,
   });
 }
 
 function savingForm(s) {
   openForm({
-    title: s ? 'Modifier l’épargne' : 'Nouvel objectif d’épargne',
+    title: s ? 'Modifier l’épargne' : 'Nouvelle épargne',
     fields: [
       { name: 'label', label: 'Nom', required: true, placeholder: 'Précaution, voyage, permis…' },
       { name: 'amount', label: 'Montant épargné (€)', type: 'number' },
@@ -698,10 +811,12 @@ function savingForm(s) {
       else state.money.savings.push({ id: uid(), ...d });
       commit('Épargne enregistrée ✓');
     },
-    onDelete: s ? () => {
-      state.money.savings = state.money.savings.filter((x) => x !== s);
-      commit('Supprimé');
-    } : null,
+    onDelete: s
+      ? () => {
+          state.money.savings = state.money.savings.filter((x) => x !== s);
+          commit('Supprimé');
+        }
+      : null,
   });
 }
 
@@ -721,27 +836,32 @@ function tripForm(trip) {
   openForm({
     title: trip ? 'Modifier le voyage' : 'Nouveau voyage',
     fields: [
-      { name: 'destination', label: 'Destination', required: true, placeholder: 'Lisbonne, Abidjan, Londres…' },
+      { name: 'emoji', label: 'Drapeau / emoji', placeholder: '🇸🇪' },
+      { name: 'destination', label: 'Destination', required: true, placeholder: 'Suède, Londres, Brésil…' },
       { name: 'status', label: 'Statut', type: 'select', options: TRIP_STATUSES.map((s) => [s, s]) },
       { name: 'start', label: 'Départ', type: 'date' },
       { name: 'end', label: 'Retour', type: 'date' },
       { name: 'budget', label: 'Budget prévu (€)', type: 'number' },
+      { name: 'image', label: 'Photo de la destination', type: 'image', max: 900 },
       { name: 'notes', label: 'Documents & notes', type: 'textarea', placeholder: 'Passeport, visa, numéros de réservation…' },
     ],
-    values: trip || { status: 'Envisagé' },
+    values: trip || { status: 'À planifier', emoji: '✈️' },
     onSubmit: (d) => {
       if (trip) Object.assign(trip, d);
       else {
         const t = { id: uid(), bookings: [], checklist: DEFAULT_CHECKLIST.map((text) => ({ id: uid(), text, done: false })), ...d };
         state.trips.push(t);
-        ui.openTrips.add(t.id);
+        location.hash = `#/voyage/${t.id}`;
       }
-      commit('Voyage enregistré ✓');
+      commit('Voyage enregistré ✈️');
     },
-    onDelete: trip ? () => {
-      state.trips = state.trips.filter((x) => x !== trip);
-      commit('Voyage supprimé');
-    } : null,
+    onDelete: trip
+      ? () => {
+          state.trips = state.trips.filter((x) => x !== trip);
+          location.hash = '#/voyages';
+          commit('Voyage supprimé');
+        }
+      : null,
   });
 }
 
@@ -750,7 +870,7 @@ function bookingForm(trip, b) {
     title: b ? 'Modifier la réservation' : 'Billet / hôtel / activité',
     fields: [
       { name: 'kind', label: 'Type', type: 'select', options: Object.entries(BOOKING_KINDS) },
-      { name: 'label', label: 'Détail', required: true, placeholder: 'Vol Paris → Lisbonne, hôtel…' },
+      { name: 'label', label: 'Détail', required: true, placeholder: 'Vol Paris → Stockholm…' },
       { name: 'cost', label: 'Coût (€)', type: 'number' },
       { name: 'booked', label: 'Réservé / payé', type: 'checkbox' },
     ],
@@ -760,36 +880,94 @@ function bookingForm(trip, b) {
       else trip.bookings.push({ id: uid(), ...d });
       commit('Enregistré ✓');
     },
-    onDelete: b ? () => {
-      trip.bookings = trip.bookings.filter((x) => x !== b);
-      commit('Supprimé');
-    } : null,
+    onDelete: b
+      ? () => {
+          trip.bookings = trip.bookings.filter((x) => x !== b);
+          commit('Supprimé');
+        }
+      : null,
   });
 }
 
-function dreamForm(dream) {
+function goalForm(goal, presetCategory) {
   openForm({
-    title: dream ? 'Modifier mon rêve' : 'Nouveau rêve à manifester',
+    title: goal ? 'Modifier l’objectif' : 'Nouvel objectif',
     fields: [
       { name: 'emoji', label: 'Emoji', placeholder: '✨' },
-      { name: 'title', label: 'Ce que je manifeste', required: true, placeholder: 'Mon CDI, mon appart, 2 000 € d’épargne…' },
-      { name: 'category', label: 'Domaine', type: 'select', options: Object.entries(DREAM_CATEGORIES) },
+      { name: 'title', label: 'Mon objectif', required: true, placeholder: 'CDI, nouvel appart, 2 000 € d’épargne…' },
+      { name: 'category', label: 'Domaine', type: 'select', options: Object.entries(DREAM_CATEGORIES).map(([k, v]) => [k, `${v.emoji} ${v.label}`]) },
+      { name: 'progress', label: 'Avancement', type: 'range' },
       { name: 'date', label: 'Pour quand ?', type: 'date' },
       { name: 'notes', label: 'Ce que je ressens quand c’est réalisé', type: 'textarea', placeholder: 'Écris-le au présent, comme si c’était déjà là…' },
       { name: 'image', label: 'Photo pour mon vision board', type: 'image' },
-      { name: 'manifested', label: 'C’est manifesté ! ✨', type: 'checkbox' },
+      { name: 'manifested', label: 'C’est réalisé ! ✨', type: 'checkbox' },
     ],
-    values: dream || { emoji: '✨', category: 'moi' },
+    values: goal || { emoji: '✨', category: presetCategory || 'moi', progress: 0 },
     onSubmit: (d) => {
-      const wasDone = dream?.manifested;
-      if (dream) Object.assign(dream, d);
+      const wasDone = goal?.manifested;
+      if (d.manifested) d.progress = 100;
+      if (goal) Object.assign(goal, d);
       else state.manifest.dreams.push({ id: uid(), ...d });
-      commit(d.manifested && !wasDone ? '🎉 Manifesté ! Bravo Marie ✨' : 'Rêve enregistré ✨');
+      commit(d.manifested && !wasDone ? '🎉 Réalisé ! Bravo ✨' : 'Objectif enregistré ✦');
     },
-    onDelete: dream ? () => {
-      state.manifest.dreams = state.manifest.dreams.filter((x) => x !== dream);
-      commit('Rêve retiré');
-    } : null,
+    onDelete: goal
+      ? () => {
+          state.manifest.dreams = state.manifest.dreams.filter((x) => x !== goal);
+          commit('Objectif retiré');
+        }
+      : null,
+  });
+}
+
+function schoolForm() {
+  openForm({
+    title: 'Mon année d’études',
+    fields: [
+      { name: 'program', label: 'Formation', placeholder: 'Master 2 MCSI' },
+      { name: 'school', label: 'École', placeholder: 'ESGI' },
+      { name: 'start', label: 'Début de l’année', type: 'date' },
+      { name: 'end', label: 'Fin de l’année', type: 'date' },
+    ],
+    values: state.settings.school,
+    onSubmit: (d) => {
+      state.settings.school = d;
+      commit('Enregistré ✓');
+    },
+  });
+}
+
+function profileForm() {
+  openForm({
+    title: 'Mon profil',
+    fields: [
+      { name: 'name', label: 'Prénom', required: true },
+      { name: 'tagline', label: 'Ma devise', placeholder: 'Dream • Plan • Do • Repeat' },
+      { name: 'photo', label: 'Photo de profil', type: 'image', max: 400 },
+      { name: 'cover', label: 'Photo de l’écran d’accueil', type: 'image', max: 1000 },
+    ],
+    values: state.settings,
+    onSubmit: (d) => {
+      Object.assign(state.settings, d);
+      commit('Profil mis à jour 💖');
+    },
+  });
+}
+
+function gratitudeForm() {
+  const t = todayISO();
+  const g = state.manifest.gratitude[t] || [];
+  openForm({
+    title: '🙏 Mes 3 gratitudes',
+    fields: [
+      { name: 'g0', label: 'Aujourd’hui je suis reconnaissante pour…' },
+      { name: 'g1', label: 'Une personne qui compte pour moi…' },
+      { name: 'g2', label: 'Une petite victoire du jour…' },
+    ],
+    values: { g0: g[0], g1: g[1], g2: g[2] },
+    onSubmit: (d) => {
+      state.manifest.gratitude[t] = [d.g0, d.g1, d.g2];
+      commit('Merci, merci, merci 🙏✨');
+    },
   });
 }
 
@@ -797,688 +975,741 @@ function dreamForm(dream) {
    Composants
    ============================================================ */
 
-function itemRow(i, { showArea = false } = {}) {
-  const cfg = AREAS[i.area];
-  const kind = cfg.kinds[i.kind] || { label: i.kind, emoji: '•' };
+const backBtn = (href = '#/menu', light = false) => `<a class="icon-btn ${light ? 'ghost' : ''}" href="${href}" aria-label="Retour">${icon('left')}</a>`;
+const progressBar = (pct, cls = '') => `<div class="bar ${cls}"><span style="width:${clamp(pct, 0, 100).toFixed(1)}%"></span></div>`;
+const emptyMsg = (text) => `<div class="empty">${esc(text)}</div>`;
+const secHead = (title, link = '', linkLabel = 'Voir tout') =>
+  `<div class="sec-head"><h2>${title}</h2>${link ? (link.startsWith('#') ? `<a class="see-all" href="${link}">${linkLabel} ${icon('right')}</a>` : `<button class="see-all" ${link}>${linkLabel} ${icon('right')}</button>`) : ''}</div>`;
+
+function taskRow(i, { showDate = true } = {}) {
+  const k = kindOf(i);
   const t = todayISO();
-  let dateBadge = '';
-  if (i.date) {
-    const cls = i.done ? '' : i.date < t ? 'bad' : i.date === t ? 'warn' : daysBetween(t, i.date) <= 3 ? 'info' : '';
-    dateBadge = `<span class="badge ${cls}">📅 ${esc(relDay(i.date))}</span>`;
-  }
-  return `<li class="row clickable ${i.done ? 'is-done' : ''}" data-action="edit-item" data-id="${i.id}">
-    <input type="checkbox" class="check" data-action="toggle-item" data-id="${i.id}" ${i.done ? 'checked' : ''} aria-label="Terminé" />
+  let right = '';
+  if (i.date && i.date !== t && showDate) right = esc(dayLabel(i.date));
+  if (i.time) right = right ? `${right}<br>${esc(i.time)}` : esc(i.time);
+  const late = !i.done && i.date && i.date < t;
+  return `<li class="row tap ${i.done ? 'done' : ''}" data-action="edit-item" data-id="${i.id}">
+    <input type="checkbox" class="circle" data-action="toggle-item" data-id="${i.id}" ${i.done ? 'checked' : ''} aria-label="Fait" />
     <div class="grow">
-      <div class="title">${esc(i.title)}</div>
-      <div class="meta">
-        <span>${showArea ? cfg.emoji + ' ' : ''}${kind.emoji} ${esc(kind.label)}</span>
-        ${i.status ? `<span class="badge accent">${esc(i.status)}</span>` : ''}
-        ${dateBadge}
-        ${i.notes ? `<span class="muted">· ${esc(i.notes.slice(0, 60))}${i.notes.length > 60 ? '…' : ''}</span>` : ''}
-      </div>
+      <div class="t">${esc(i.title)}</div>
+      <div class="s"><span>${esc(k.tag)}</span>${i.status ? `<span class="badge pink">${esc(i.status)}</span>` : ''}${late ? '<span class="badge bad">en retard</span>' : ''}</div>
     </div>
+    ${right ? `<div class="r">${right}</div>` : ''}
   </li>`;
 }
 
 function routineRow(r, date = todayISO()) {
   const done = !!r.log[date];
-  return `<li class="row ${done ? 'is-done' : ''}">
-    <input type="checkbox" class="check" data-action="toggle-routine" data-id="${r.id}" ${done ? 'checked' : ''} aria-label="Fait" />
-    <div class="grow"><div class="title">${esc(r.emoji)} ${esc(r.label)}</div><div class="meta">Routine</div></div>
+  return `<li class="row ${done ? 'done' : ''}">
+    <input type="checkbox" class="circle" data-action="toggle-routine" data-id="${r.id}" data-date="${date}" ${done ? 'checked' : ''} aria-label="Fait" />
+    <div class="grow tap" data-action="edit-routine" data-id="${r.id}"><div class="t">${esc(r.label)}</div><div class="s">${esc(r.emoji)} Routine</div></div>
+    ${r.time ? `<div class="r">${esc(r.time)}</div>` : ''}
   </li>`;
 }
 
-function billRow(x, { compact = false } = {}) {
-  const { bill, date } = x;
-  const t = todayISO();
-  const d = daysBetween(t, date);
-  const cls = d < 0 ? 'bad' : d <= 3 ? 'warn' : '';
-  return `<li class="row">
+function goalCard(d) {
+  const cat = DREAM_CATEGORIES[d.category] || DREAM_CATEGORIES.moi;
+  return `<div class="goal ${d.manifested ? 'done' : ''}" data-action="edit-goal" data-id="${d.id}" role="button" tabindex="0">
+    <div class="ico-box round pink">${esc(d.emoji || cat.emoji)}</div>
     <div class="grow">
-      <div class="title">${esc(bill.label)}</div>
-      <div class="meta"><span>${esc(BILL_CATEGORIES[bill.category] || '')}</span><span class="badge ${cls}">📅 ${esc(d < 0 ? inDays(d) : relDay(date))}</span></div>
-    </div>
-    <span class="amount">${eur(bill.amount)}</span>
-    <button class="btn small good" data-action="pay-bill" data-id="${bill.id}" data-month="${date.slice(0, 7)}">Marquer payé</button>
-    ${compact ? '' : `<button class="icon-btn" data-action="edit-bill" data-id="${bill.id}" aria-label="Modifier">✏️</button>`}
-  </li>`;
-}
-
-function progress(value, max, cls = '') {
-  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
-  return `<div class="bar ${cls}"><span style="width:${pct.toFixed(1)}%"></span></div>`;
-}
-
-function tile(label, value, foot = '', cls = '') {
-  return `<div class="card tile ${cls}"><div class="label">${esc(label)}</div><div class="value">${value}</div>${foot ? `<div class="foot">${foot}</div>` : ''}</div>`;
-}
-
-function emptyMsg(text) {
-  return `<div class="empty">${esc(text)}</div>`;
-}
-
-/* ============================================================
-   Vue : Aujourd'hui
-   ============================================================ */
-
-function viewToday() {
-  const t = todayISO();
-  const now = new Date();
-  const hour = now.getHours();
-  const hello = hour < 5 ? 'Bonne nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir';
-  const work = dueNow('travail');
-  const school = dueNow('ecole');
-  const daily = dueNow('quotidien');
-  const bills = billsDueWithin(3);
-  const routines = routinesToday();
-  const budget = monthBudget();
-  const salary = nextSalary();
-  const shopping = itemsFor('quotidien').filter((i) => i.kind === 'courses' && !i.done);
-
-  const line = (href, emo, text, zero = false) =>
-    `<li><a href="${href}" class="${zero ? 'zero' : ''}"><span class="emo">${emo}</span><span>${text}</span></a></li>`;
-
-  const summary = [];
-  summary.push(line('#/travail', '💼', esc(AREAS.travail.todayLabel(work.length)), !work.length));
-  summary.push(line('#/ecole', '🎓', esc(AREAS.ecole.todayLabel(school.length)), !school.length));
-  summary.push(line('#/argent', '💰', esc(`${bills.length} paiement${bills.length > 1 ? 's' : ''} à prévoir`), !bills.length));
-  if (daily.length) summary.push(line('#/quotidien', '🏠', esc(AREAS.quotidien.todayLabel(daily.length))));
-  const grat = state.manifest.gratitude[t] || [];
-  for (const r of routines) {
-    const done = !!r.log[t];
-    summary.push(`<li><a href="#/quotidien"><span class="emo">${esc(r.emoji)}</span><span class="${done ? 'done-line' : ''}">${esc(r.label)}</span></a></li>`);
-  }
-  if (shopping.length && !routines.some((r) => /course/i.test(r.label))) {
-    summary.push(line('#/quotidien', '🛒', esc(`Courses (${shopping.length} article${shopping.length > 1 ? 's' : ''})`)));
-  }
-
-  if (!grat.some((x) => x.trim())) summary.push(line('#/manifestation', '🙏', 'Mes 3 gratitudes du jour'));
-
-  let salaryText = 'Ajoute ton salaire dans Argent';
-  if (salary) {
-    salaryText = salary.days < 0 ? `attendu depuis ${-salary.days} j` : salary.days === 0 ? "aujourd'hui 🎉" : `dans ${salary.days} jour${salary.days > 1 ? 's' : ''}`;
-  }
-
-  // À faire aujourd'hui (détail)
-  const allDue = [...work, ...school, ...daily].sort((a, b) => a.date.localeCompare(b.date));
-  const todoHTML = [
-    ...routines.map((r) => routineRow(r)),
-    ...allDue.map((i) => itemRow(i, { showArea: true })),
-    ...bills.map((b) => billRow(b, { compact: true })),
-  ].join('');
-
-  // Cette semaine
-  const in7 = addDays(t, 7);
-  const upcoming = state.items
-    .filter((i) => !i.done && i.date && i.date > t && i.date <= in7)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const bigDates = state.items
-    .filter((i) => !i.done && i.date && i.date > in7 && ['examen', 'rattrapage', 'toeic', 'renouvellement', 'candidature'].includes(i.kind))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 4);
-  const nextTrip = state.trips
-    .filter((tr) => tr.start && tr.start >= t)
-    .sort((a, b) => a.start.localeCompare(b.start))[0];
-  const extras = upcomingExtraIncomes().slice(0, 2);
-
-  return `
-  <header class="page-head">
-    <div>
-      <h1>${hello} ${esc(state.settings.name)} ☀️</h1>
-      <div class="sub">${esc(capitalize(dateLong.format(now)))}</div>
-    </div>
-    <div class="head-actions">
-      <a class="btn mobile-only" href="#/reglages" aria-label="Réglages">⚙️</a>
-      <button class="btn" data-action="quick-expense">− Dépense</button>
-      <button class="btn primary" data-action="quick-add">+ Ajouter</button>
-    </div>
-  </header>
-
-  ${(() => {
-    const aff = affirmationOfDay();
-    return aff ? `<a href="#/manifestation" class="affirmation-banner leopard"><span>✨ ${esc(aff.text)}</span></a>` : '';
-  })()}
-  <section class="hero">
-    <div>
-      <h2>Aujourd'hui</h2>
-      <ul class="summary">${summary.join('')}</ul>
-    </div>
-    <div class="hero-money">
-      <a href="#/argent" class="big-stat ${budget.remaining < 0 ? 'neg' : ''}" style="text-decoration:none">
-        <div class="label">Budget restant</div>
-        <div class="value">${eur(budget.remaining)}</div>
-        <div class="foot">${budget.daysLeft > 0 ? `soit ~${eur(Math.max(0, budget.remaining) / budget.daysLeft)} / jour jusqu'à la fin du mois` : ''}</div>
-      </a>
-      <div class="mini-stat"><span>💶 Prochain salaire</span><span class="value">${esc(salaryText)}</span></div>
-      ${budget.expected > 0 ? `<div class="mini-stat"><span>⏳ Encore attendu ce mois</span><span class="value">${eur(budget.expected)}</span></div>` : ''}
-    </div>
-  </section>
-
-  <div class="grid grid-2 section">
-    <div class="card">
-      <div class="section-head"><h2>À faire aujourd'hui</h2><span class="hint">${allDue.length + routines.length + bills.length} élément(s)</span></div>
-      <ul class="list">${todoHTML || ''}</ul>
-      ${todoHTML ? '' : emptyMsg('Rien de prévu aujourd’hui. Profite ✨')}
-    </div>
-    <div class="card">
-      <div class="section-head"><h2>Les 7 prochains jours</h2></div>
-      <ul class="list">${upcoming.map((i) => itemRow(i, { showArea: true })).join('')}</ul>
-      ${upcoming.length ? '' : emptyMsg('Semaine tranquille pour l’instant.')}
-      ${bigDates.length || nextTrip || extras.length ? `<div class="group-label">À l'horizon</div><ul class="list">
-        ${bigDates.map((i) => `<li class="row clickable" data-action="edit-item" data-id="${i.id}"><div class="grow"><div class="title">${AREAS[i.area].kinds[i.kind]?.emoji || ''} ${esc(i.title)}</div></div><span class="badge info">${esc(inDays(daysBetween(t, i.date)))}</span></li>`).join('')}
-        ${nextTrip ? `<li class="row clickable" data-action="goto" data-href="#/voyages"><div class="grow"><div class="title">✈️ ${esc(nextTrip.destination)}</div></div><span class="badge accent">${esc(inDays(daysBetween(t, nextTrip.start)))}</span></li>` : ''}
-        ${extras.map((x) => `<li class="row"><div class="grow"><div class="title">💸 ${esc(x.label)}</div><div class="meta">${x.date ? esc(fmtDate(x.date)) : ''}</div></div><span class="amount pos">+${eur(x.amount)}</span></li>`).join('')}
-      </ul>` : ''}
+      <div class="t">${esc(d.title)}</div>
+      <div class="meta"><span>${esc(cat.label)}${d.date ? ` · ${esc(fmtMonthShort.format(parseISO(d.date)))}` : ''}</span><span class="pct">${d.manifested ? '✨ Réalisé' : `${d.progress || 0} %`}</span></div>
+      ${progressBar(d.progress || 0, 'pink')}
     </div>
   </div>`;
 }
 
 /* ============================================================
-   Vue : Argent
+   Écran d'accueil (premier lancement)
+   ============================================================ */
+
+function viewSplash() {
+  const cover = state.settings.cover;
+  return `<section class="splash ${cover ? '' : 'no-photo'}" ${cover ? `style="background-image:url('${esc(cover)}')"` : ''}>
+    <div class="logo">
+      <div class="name">MARIE</div>
+      <div class="sub">DASHBOARD</div>
+      <div class="tag">My life, organized.</div>
+      <div class="stars">✦ ✧ ✦</div>
+    </div>
+    <div>
+      <button class="btn glass" data-action="start">Commencer</button>
+      <button class="link" data-action="start-login">Se connecter</button>
+    </div>
+  </section>`;
+}
+
+/* ============================================================
+   Accueil
+   ============================================================ */
+
+function viewHome() {
+  const t = todayISO();
+  const now = new Date();
+  const due = dueNow();
+  const byArea = ['travail', 'ecole', 'quotidien'].filter((a) => due.some((i) => i.area === a)).map((a) => AREAS[a].label);
+  const routines = routinesOn(t);
+  const bills = upcomingBills(7).filter((b) => b.month === monthKey() || daysBetween(t, b.date) <= 7);
+  const budget = monthBudget();
+  const salary = nextSalary();
+  const aff = affirmationOfDay();
+  const career = topGoal('carriere');
+  const trip = nextTrip();
+  const activeGoals = state.manifest.dreams.filter((d) => !d.manifested).length;
+  const grat = (state.manifest.gratitude[t] || []).some((x) => x.trim());
+  const al = alerts();
+  const hour = now.getHours();
+  const hello = hour < 5 ? 'Bonne nuit' : hour < 18 ? 'Bonjour' : 'Bonsoir';
+
+  const rows = [];
+  rows.push(`<li class="row tap" data-action="goto" data-href="#/taches">
+    <div class="ico-box">${icon('check')}</div>
+    <div class="grow"><div class="t">${due.length ? plural(due.length, 'chose') + ' à faire' : 'Rien d’urgent ✨'}</div><div class="s">${esc(byArea.join(' / ') || 'Profite de ta journée')}</div></div>
+    <span class="chev">${icon('right')}</span></li>`);
+  if (bills.length) {
+    const b = bills[0];
+    rows.push(`<li class="row tap" data-action="goto" data-href="#/argent">
+      <div class="ico-box">${icon('calendar')}</div>
+      <div class="grow"><div class="t">${plural(bills.length, 'échéance')}</div><div class="s">${esc(b.bill.label)} – ${eur(b.bill.amount)} (${esc(fmtDayMonth(b.date))})</div></div>
+      <span class="chev">${icon('right')}</span></li>`);
+  }
+  if (salary) {
+    rows.push(`<li class="row tap" data-action="goto" data-href="#/argent">
+      <div class="ico-box">${icon('euro')}</div>
+      <div class="grow"><div class="t">Prochain salaire ${salary.days < 0 ? 'attendu' : salary.days === 0 ? "aujourd'hui 🎉" : `dans ${plural(salary.days, 'jour')}`}</div><div class="s">${esc(salary.inc.label)} – ${eur(salary.inc.amount)}</div></div>
+      <span class="chev">${icon('right')}</span></li>`);
+  }
+  for (const r of routines) {
+    const done = !!r.log[t];
+    rows.push(`<li class="row ${done ? 'done' : ''}">
+      <div class="ico-box">${icon('dumbbell')}</div>
+      <div class="grow tap" data-action="edit-routine" data-id="${r.id}"><div class="t">${esc(r.label)}</div><div class="s">${esc(r.emoji)} ${r.time ? esc(fmtTime(r.time)) : 'Aujourd’hui'}</div></div>
+      <input type="checkbox" class="circle" data-action="toggle-routine" data-id="${r.id}" data-date="${t}" ${done ? 'checked' : ''} aria-label="Fait" /></li>`);
+  }
+  if (!grat) {
+    rows.push(`<li class="row tap" data-action="gratitude">
+      <div class="ico-box pink">${icon('heart')}</div>
+      <div class="grow"><div class="t">Mes 3 gratitudes</div><div class="s">30 secondes pour dire merci</div></div>
+      <span class="chev">${icon('right')}</span></li>`);
+  }
+
+  const hidden = state.settings.hideBalance;
+  return `
+  <header class="head">
+    <div class="head-row">
+      <div>
+        <h1 class="hello">${hello} ${esc(state.settings.name)} 👋</h1>
+        <div class="subtitle">${esc(cap(fmtLong.format(now)))}</div>
+      </div>
+      <button class="icon-btn ${al.count ? 'dot' : ''}" data-action="alerts" aria-label="Rappels">${icon('bell')}</button>
+    </div>
+  </header>
+
+  ${aff ? `<a class="quote" href="#/manifestation"><div class="quote-inner">${esc(aff.text)}<span class="heart">♥</span></div></a>` : ''}
+
+  <section class="section">
+    ${secHead("Aujourd'hui", '#/taches')}
+    <div class="card flush"><ul class="list">${rows.join('')}</ul></div>
+  </section>
+
+  <div class="tiles">
+    <a class="tile" href="#/argent">
+      <div class="top"><div class="ico-box" style="background:var(--surface)">${icon('wallet')}</div><span class="corner">${icon('wallet')}</span></div>
+      <div><div class="label">Money</div><div class="big ${hidden ? 'hide-amount' : ''}">${eur(budget.remaining)}</div><div class="small">disponible ce mois-ci</div></div>
+    </a>
+    <a class="tile peach" href="#/carriere">
+      <div class="top"><div class="ico-box" style="background:var(--surface)">${icon('briefcase')}</div><span class="corner">${icon('briefcase')}</span></div>
+      <div><div class="label">Career</div><div class="small">${career ? esc(career.title) : 'Ajoute un objectif'}</div>
+      ${career ? `<div class="between mt" style="margin-top:6px"><div style="flex:1">${progressBar(career.progress)}</div><span class="pct">${career.progress} %</span></div>` : ''}</div>
+    </a>
+    <a class="tile lilac" href="${trip ? `#/voyage/${trip.id}` : '#/voyages'}">
+      <div class="top"><div class="ico-box" style="background:var(--surface)">${icon('plane')}</div><span class="corner">${icon('plane')}</span></div>
+      <div><div class="label">Travel</div><div class="small">${trip ? `${esc(trip.destination)} ${esc(trip.emoji || '')}` : 'Prochaine aventure ?'}</div>${trip ? `<div class="small">Budget : ${eur(trip.budget)}</div>` : ''}</div>
+    </a>
+    <a class="tile ink" href="#/objectifs">
+      <div class="top"><div class="ico-box pink">${icon('target')}</div><span class="corner">✦</span></div>
+      <div><div class="label">Goals</div><div class="small">${plural(activeGoals, 'objectif actif', 'objectifs actifs')}</div></div>
+    </a>
+  </div>`;
+}
+
+/* ============================================================
+   Tâches
+   ============================================================ */
+
+const TASK_FILTERS = [
+  ['all', 'Tout'],
+  ['travail', 'Pro'],
+  ['ecole', 'École'],
+  ['quotidien', 'Perso'],
+];
+
+function viewTasks() {
+  const t = todayISO();
+  const in7 = addDays(t, 7);
+  const f = ui.taskFilter;
+  const all = state.items.filter((i) => f === 'all' || i.area === f);
+  const open = all.filter((i) => !i.done);
+  const done = all.filter((i) => i.done).sort((a, b) => byDateTime(b, a));
+  const routines = f === 'all' || f === 'quotidien' ? routinesOn(t) : [];
+  const groups = [
+    ['En retard', open.filter((i) => i.date && i.date < t).sort(byDateTime), 'bad'],
+    ["Aujourd'hui", open.filter((i) => i.date === t).sort(byDateTime), '', routines],
+    ['Cette semaine', open.filter((i) => i.date > t && i.date <= in7).sort(byDateTime)],
+    ['Plus tard', open.filter((i) => i.date > in7).sort(byDateTime)],
+    ['Sans date', open.filter((i) => !i.date)],
+  ];
+  const body = groups
+    .filter(([, list, , extra]) => list.length || extra?.length)
+    .map(([label, list, cls, extra = []]) => {
+      const rows = [...extra.map((r) => ({ html: routineRow(r), time: r.time || '99' })), ...list.map((i) => ({ html: taskRow(i, { showDate: label !== "Aujourd'hui" }), time: label === "Aujourd'hui" ? i.time || '99' : '' }))];
+      if (label === "Aujourd'hui") rows.sort((a, b) => a.time.localeCompare(b.time));
+      return `${secHead(`${label}${cls ? ' ⚠️' : ''}`)}<div class="card flush"><ul class="list">${rows.map((r) => r.html).join('')}</ul></div>`;
+    })
+    .join('');
+
+  return `
+  <header class="head">
+    <h1 class="title sparkle">Tâches</h1>
+    <div class="subtitle">Reste focus sur l’essentiel.</div>
+  </header>
+  <div class="chips">${TASK_FILTERS.map(([k, l]) => `<button class="chip ${f === k ? 'active' : ''}" data-action="task-filter" data-filter="${k}">${l}</button>`).join('')}</div>
+  <section class="section">
+    ${body || `<div class="card">${emptyMsg('Tout est fait. Tu es une reine 👑')}</div>`}
+    <div class="add-pill"><button class="btn soft" data-action="add-item" data-area="${f === 'all' ? 'travail' : f}">${icon('plus')} Ajouter une tâche</button></div>
+    ${done.length ? `<div class="add-pill"><button class="btn ghost sm" data-action="toggle-show-done">${ui.showDone ? 'Masquer' : 'Voir'} les tâches terminées (${done.length})</button></div>` : ''}
+    ${ui.showDone && done.length ? `<div class="card flush"><ul class="list">${done.slice(0, 50).map((i) => taskRow(i)).join('')}</ul></div>
+      <div class="add-pill"><button class="btn danger sm" data-action="clear-done">Vider les terminées</button></div>` : ''}
+  </section>`;
+}
+
+/* ============================================================
+   Calendrier
+   ============================================================ */
+
+function eventsOn(date) {
+  const ev = [];
+  for (const i of state.items) if (i.date === date) ev.push({ time: i.time, title: i.title, sub: kindOf(i).tag, done: i.done, action: `data-action="edit-item" data-id="${i.id}"`, dot: '' });
+  for (const r of routinesOn(date)) ev.push({ time: r.time, title: r.label, sub: `${r.emoji} Routine`, done: !!r.log[date], action: `data-action="edit-routine" data-id="${r.id}"`, dot: '' });
+  const ym = date.slice(0, 7);
+  for (const b of state.money.bills) if (dateInMonth(b.day, ym) === date) ev.push({ time: '', title: `${b.label} – ${eur(b.amount)}`, sub: 'Paiement', done: b.paid.includes(ym), action: `data-action="edit-bill" data-id="${b.id}"`, dot: 'lilac' });
+  for (const inc of state.money.recurringIncomes) if (dateInMonth(inc.day, ym) === date) ev.push({ time: '', title: `${inc.label} + ${eur(inc.amount)}`, sub: 'Revenu', done: inc.received.includes(ym), action: `data-action="edit-income" data-id="${inc.id}"`, dot: 'good' });
+  for (const x of state.money.extraIncomes) if (x.date === date) ev.push({ time: '', title: `${x.label} + ${eur(x.amount)}`, sub: 'Revenu exceptionnel', done: x.received, action: `data-action="edit-extra" data-id="${x.id}"`, dot: 'good' });
+  for (const tr of state.trips) {
+    if (tr.start === date) ev.push({ time: '', title: `Départ ${tr.destination} ${tr.emoji || ''}`, sub: 'Voyage', action: `data-action="goto" data-href="#/voyage/${tr.id}"`, dot: 'lilac' });
+    if (tr.end === date && tr.end !== tr.start) ev.push({ time: '', title: `Retour de ${tr.destination}`, sub: 'Voyage', action: `data-action="goto" data-href="#/voyage/${tr.id}"`, dot: 'lilac' });
+  }
+  return ev.sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+}
+
+function viewCalendar() {
+  const ym = ui.calMonth;
+  const [y, m] = ym.split('-').map(Number);
+  const first = new Date(y, m - 1, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const start = addDays(iso(first), -offset);
+  const t = todayISO();
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(start, i);
+    if (i >= 35 && !d.startsWith(ym)) break;
+    const ev = eventsOn(d).filter((e) => !e.sub.includes('Routine'));
+    const dots = [...new Set(ev.map((e) => e.dot))].slice(0, 3).map((c) => `<i class="${c}"></i>`).join('');
+    cells.push(`<button class="day ${d.startsWith(ym) ? '' : 'out'} ${d === t ? 'today' : ''} ${d === ui.calDay ? 'sel' : ''}" data-action="cal-day" data-date="${d}">${parseISO(d).getDate()}${dots ? `<span class="dots">${dots}</span>` : ''}</button>`);
+  }
+  const sel = ui.calDay;
+  const events = eventsOn(sel);
+  const selLabel = sel === t ? `Aujourd'hui – ${cap(fmtLongNoYear.format(parseISO(sel)))}` : cap(fmtLongNoYear.format(parseISO(sel)));
+  return `
+  <header class="head">
+    <h1 class="title sparkle">Calendrier</h1>
+    <div class="subtitle">Tes dates, tes projets, ton planning.</div>
+  </header>
+  <section class="section">
+    <div class="card cal">
+      <div class="cal-head">
+        <button class="icon-btn sm" data-action="cal-month" data-step="-1" aria-label="Mois précédent">${icon('left')}</button>
+        <h3>${esc(cap(fmtMonth.format(first)))}</h3>
+        <button class="icon-btn sm" data-action="cal-month" data-step="1" aria-label="Mois suivant">${icon('right')}</button>
+      </div>
+      <div class="cal-grid">${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d) => `<div class="dow">${d}</div>`).join('')}${cells.join('')}</div>
+    </div>
+    ${secHead(esc(selLabel))}
+    <div class="card flush agenda"><ul class="list">${events
+      .map((e) => `<li class="row tap ${e.done ? 'done' : ''}" ${e.action}><span class="time">${e.time ? esc(e.time) : '—'}</span><div class="grow"><div class="t">${esc(e.title)}</div><div class="s">${esc(e.sub)}</div></div></li>`)
+      .join('')}</ul>${events.length ? '' : emptyMsg('Rien de prévu ce jour-là.')}</div>
+    <div class="add-pill"><button class="btn soft" data-action="add-item" data-date="${sel}">${icon('plus')} Ajouter ce jour-là</button></div>
+  </section>`;
+}
+
+/* ============================================================
+   Argent
    ============================================================ */
 
 function viewMoney() {
   const m = monthKey();
   const money = state.money;
   const b = monthBudget(m);
-  const totalSavings = sum(money.savings, (s) => s.amount);
-  const totalDebts = sum(money.debts, (d) => d.remaining);
-  const monthExpenses = money.expenses.filter((e) => e.date.startsWith(m)).sort((a, c) => c.date.localeCompare(a.date));
-  const byCat = {};
-  for (const e of monthExpenses) byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount);
-  const cats = Object.entries(byCat).sort((a, c) => c[1] - a[1]);
-  const maxCat = cats.length ? cats[0][1] : 0;
   const t = todayISO();
+  const hidden = state.settings.hideBalance;
+  const monthExpenses = money.expenses.filter((e) => e.date.startsWith(m)).sort((a, c) => c.date.localeCompare(a.date));
 
-  const incomesHTML = money.recurringIncomes
-    .slice()
-    .sort((a, c) => a.day - c.day)
-    .map((inc) => {
-      const got = inc.received.includes(m);
-      const date = dateInMonth(inc.day, m);
-      const d = daysBetween(t, date);
-      return `<li class="row">
-        <div class="grow">
-          <div class="title">${inc.kind === 'caf' ? '🏛️' : inc.kind === 'salaire' ? '💼' : '💶'} ${esc(inc.label)}</div>
-          <div class="meta">le ${inc.day} du mois · ${got ? '<span class="badge good">Reçu ce mois</span>' : `<span class="badge ${d < 0 ? 'warn' : ''}">${d < 0 ? 'pas encore reçu' : esc(inDays(d))}</span>`}</div>
-        </div>
-        <span class="amount pos">+${eur(inc.amount)}</span>
-        <button class="btn small ${got ? '' : 'good'}" data-action="toggle-income" data-id="${inc.id}">${got ? 'Annuler' : 'Reçu'}</button>
-        <button class="icon-btn" data-action="edit-income" data-id="${inc.id}" aria-label="Modifier">✏️</button>
-      </li>`;
-    })
-    .join('');
+  const incomes = [
+    ...money.recurringIncomes.map((inc) => ({ type: 'rec', inc, date: incomeNextDate(inc), got: false })),
+    ...money.extraIncomes.filter((x) => !x.received).map((x) => ({ type: 'extra', inc: x, date: x.date, got: false })),
+  ].sort((a, c) => (a.date || '9').localeCompare(c.date || '9'));
+  const received = money.recurringIncomes.filter((i) => i.received.includes(m));
 
-  const extrasSorted = money.extraIncomes.slice().sort((a, c) => Number(a.received) - Number(c.received) || (a.date || '').localeCompare(c.date || ''));
-  const extrasHTML = extrasSorted
-    .map((x) => `<li class="row ${x.received ? 'is-done' : ''}">
-        <input type="checkbox" class="check" data-action="toggle-extra" data-id="${x.id}" ${x.received ? 'checked' : ''} aria-label="Reçu" />
-        <div class="grow clickable" data-action="edit-extra" data-id="${x.id}"><div class="title">${esc(x.label)}</div><div class="meta">${x.date ? `prévu ${esc(relDay(x.date))}` : ''}</div></div>
-        <span class="amount pos">+${eur(x.amount)}</span>
-      </li>`)
-    .join('');
+  const incomeRow = ({ type, inc, date }) => `<li class="row">
+    <input type="checkbox" class="circle" data-action="${type === 'rec' ? 'toggle-income' : 'toggle-extra'}" data-id="${inc.id}" aria-label="Reçu" />
+    <div class="grow tap" data-action="${type === 'rec' ? 'edit-income' : 'edit-extra'}" data-id="${inc.id}"><div class="t">${esc(inc.label)}</div><div class="s">${type === 'rec' ? esc(INCOME_KINDS[inc.kind] || '') : 'Exceptionnel'}</div></div>
+    <div class="r"><div class="amt pos">${type === 'extra' ? '≈ ' : ''}${eur(inc.amount)}</div><div>le ${esc(fmtDate(date))}</div></div>
+  </li>`;
 
-  const billsHTML = money.bills
-    .slice()
-    .sort((a, c) => a.day - c.day)
-    .map((bill) => {
-      const paid = bill.paid.includes(m);
-      const date = dateInMonth(bill.day, m);
-      const d = daysBetween(t, date);
-      return `<li class="row ${paid ? 'is-done' : ''}">
-        <input type="checkbox" class="check" data-action="toggle-bill" data-id="${bill.id}" ${paid ? 'checked' : ''} aria-label="Payé ce mois" />
-        <div class="grow clickable" data-action="edit-bill" data-id="${bill.id}">
-          <div class="title">${esc(bill.label)}</div>
-          <div class="meta"><span>${esc(BILL_CATEGORIES[bill.category] || '')} · le ${bill.day}</span>${paid ? '<span class="badge good">Payé</span>' : `<span class="badge ${d < 0 ? 'bad' : d <= 3 ? 'warn' : ''}">${esc(d < 0 ? inDays(d) : relDay(date))}</span>`}</div>
-        </div>
-        <span class="amount">${eur(bill.amount)}</span>
-      </li>`;
-    })
-    .join('');
-
-  const expensesHTML = monthExpenses
-    .map((e) => `<li class="row clickable" data-action="edit-expense" data-id="${e.id}">
-        <div class="grow"><div class="title">${esc(e.label)}</div><div class="meta"><span>${esc(e.category)}</span><span>${esc(fmtDate(e.date))}</span></div></div>
-        <span class="amount">−${eur(e.amount)}</span>
-      </li>`)
-    .join('');
-
-  const debtsHTML = money.debts
-    .map((d) => `<li class="row" style="display:block">
-        <div class="split"><span class="title clickable" data-action="edit-debt" data-id="${d.id}">${esc(d.label)}</span><span class="amount">${eur(d.remaining)} <span class="muted small">/ ${eur(d.total)}</span></span></div>
-        ${progress(d.total - d.remaining, d.total)}
-        <div class="split small muted" style="margin-top:6px"><span>${d.remaining <= 0 ? '🎉 Remboursée !' : `${Math.round(((d.total - d.remaining) / (d.total || 1)) * 100)} % remboursé`}</span>
-        ${d.remaining > 0 ? `<button class="btn small" data-action="repay-debt" data-id="${d.id}">Rembourser</button>` : ''}</div>
-      </li>`)
-    .join('');
-
-  const savingsHTML = money.savings
-    .map((s) => `<li class="row" style="display:block">
-        <div class="split"><span class="title clickable" data-action="edit-saving" data-id="${s.id}">${esc(s.label)}</span><span class="amount">${eur(s.amount)}${s.goal ? ` <span class="muted small">/ ${eur(s.goal)}</span>` : ''}</span></div>
-        ${s.goal ? progress(s.amount, s.goal, 'accent') : ''}
-        <div class="split small muted" style="margin-top:6px"><span>${s.goal ? (s.amount >= s.goal ? '🎉 Objectif atteint' : `encore ${eur(s.goal - s.amount)}`) : ''}</span>
-        <button class="btn small" data-action="deposit-saving" data-id="${s.id}">Verser</button></div>
-      </li>`)
-    .join('');
+  const unpaid = money.bills.map((bill) => ({ bill, ...billNextDue(bill) })).filter((x) => x.month === m).sort((a, c) => a.date.localeCompare(c.date));
+  const paid = money.bills.filter((bill) => bill.paid.includes(m));
+  const billRow = ({ bill, date }) => {
+    const d = daysBetween(t, date);
+    return `<li class="row">
+      <input type="checkbox" class="circle" data-action="toggle-bill" data-id="${bill.id}" aria-label="Payé" />
+      <div class="grow tap" data-action="edit-bill" data-id="${bill.id}"><div class="t">${esc(bill.label)}</div><div class="s">${esc(BILL_CATEGORIES[bill.category] || '')}${d < 0 ? ' · <span class="badge bad">en retard</span>' : d <= 3 ? ` · <span class="badge warn">${esc(inDays(d))}</span>` : ''}</div></div>
+      <div class="r"><div class="amt neg">${eur(bill.amount)}</div><div>le ${esc(fmtDate(date))}</div></div>
+    </li>`;
+  };
 
   return `
-  <header class="page-head">
-    <div><h1>💰 Argent</h1><div class="sub">${esc(capitalize(monthLong.format(new Date())))}</div></div>
-    <div class="head-actions">
-      <button class="btn" data-action="add-extra">+ Revenu</button>
-      <button class="btn primary" data-action="add-expense">− Dépense</button>
+  <header class="dark-head">
+    <div class="head-row">
+      <div><h1 class="title sparkle">Argent</h1><div class="subtitle">Gère ton budget, atteins tes objectifs.</div></div>
+      ${backBtn('#/accueil', true)}
+    </div>
+    <div class="balance">
+      <div class="lbl">Solde disponible</div>
+      <div class="val ${b.remaining < 0 ? 'neg' : ''}"><span class="${hidden ? 'hide-amount' : ''}">${eur(b.remaining)}</span>
+        <button class="icon-btn ghost sm" style="background:transparent;color:#fff" data-action="toggle-balance" aria-label="${hidden ? 'Afficher' : 'Masquer'} le solde">${icon(hidden ? 'eye-off' : 'eye')}</button></div>
+      <button class="pill-btn" data-action="budget-detail">Voir le détail ${icon('right')}</button>
     </div>
   </header>
+  <div class="sheet">
+    <section class="section">
+      ${secHead('Ce mois-ci', '', '')}
+      <div class="card">
+        <div class="split2">
+          <div class="kpi"><div class="ico-box round good">${icon('euro')}</div><div><div class="k">Revenus</div><div class="v pos">${eur(b.income)}</div></div></div>
+          <div class="sep"></div>
+          <div class="kpi"><div class="ico-box round bad">${icon('receipt')}</div><div><div class="k">Dépenses</div><div class="v neg">−${eur(b.spent)}</div></div></div>
+        </div>
+        <div class="mt">${progressBar((b.spent / Math.max(1, b.income + b.carry)) * 100, b.remaining < 0 ? 'bad' : 'leo')}</div>
+        <div class="between mt small"><span>Reste : <strong>${eur(b.remaining)}</strong></span><span class="muted">${b.daysLeft ? `~${eur(Math.max(0, b.remaining) / b.daysLeft)} / jour` : ''}</span></div>
+      </div>
 
-  <div class="grid grid-tiles">
-    ${tile('Budget restant', eur(b.remaining), b.daysLeft ? `~${eur(Math.max(0, b.remaining) / b.daysLeft)}/jour · ${b.daysLeft} j restants` : '', b.remaining < 0 ? 'bad' : 'accent')}
-    ${tile('Revenus reçus', eur(b.income), b.expected ? `+ ${eur(b.expected)} attendus` : '', 'good')}
-    ${tile('Dépenses du mois', eur(b.expenses), `${monthExpenses.length} dépense(s)`)}
-    ${tile('Loyers & charges', eur(b.charges), b.chargesLeft ? `${eur(b.chargesLeft)} encore à payer` : 'tout est payé ✓')}
-    ${tile('Épargne', eur(totalSavings), `${money.savings.length} objectif(s)`, 'good')}
-    ${tile('Dettes', eur(totalDebts), totalDebts ? 'reste à rembourser' : 'aucune 🎉', totalDebts ? 'bad' : '')}
-  </div>
+      ${secHead('Prochains revenus', 'data-action="add-income-choice"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${incomes.map(incomeRow).join('')}</ul>${incomes.length ? '' : emptyMsg('Ajoute ton salaire et la CAF.')}</div>
+      ${received.length ? `<div class="group-label">Déjà reçu ce mois</div><div class="card flush"><ul class="list">${received
+        .map((inc) => `<li class="row done"><input type="checkbox" class="circle" checked data-action="toggle-income" data-id="${inc.id}" aria-label="Reçu" /><div class="grow tap" data-action="edit-income" data-id="${inc.id}"><div class="t">${esc(inc.label)}</div></div><div class="amt pos">${eur(inc.amount)}</div></li>`)
+        .join('')}</ul></div>` : ''}
 
-  <div class="card section">
-    <div class="section-head"><h2>Comment est calculé le budget ?</h2></div>
-    <ul class="list num">
-      <li class="row"><div class="grow">Solde au début du mois</div><span class="amount">${eur(b.carry)}</span><button class="icon-btn" data-action="edit-carry" aria-label="Modifier le solde de départ">✏️</button></li>
-      <li class="row"><div class="grow">+ Revenus reçus ce mois</div><span class="amount pos">${eur(b.income)}</span></li>
-      <li class="row"><div class="grow">− Loyers, factures & abonnements du mois</div><span class="amount">${eur(b.charges)}</span></li>
-      <li class="row"><div class="grow">− Dépenses du mois</div><span class="amount">${eur(b.expenses)}</span></li>
-      <li class="row"><div class="grow"><strong>= Budget disponible jusqu'à la fin du mois</strong></div><span class="amount">${eur(b.remaining)}</span></li>
+      ${secHead('Dépenses à venir', 'data-action="add-bill"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${unpaid.map(billRow).join('')}</ul>${unpaid.length ? '' : emptyMsg('Tout est payé ce mois-ci ✨')}</div>
+      ${paid.length ? `<div class="group-label">Déjà payé ce mois</div><div class="card flush"><ul class="list">${paid
+        .map((bill) => `<li class="row done"><input type="checkbox" class="circle" checked data-action="toggle-bill" data-id="${bill.id}" aria-label="Payé" /><div class="grow tap" data-action="edit-bill" data-id="${bill.id}"><div class="t">${esc(bill.label)}</div></div><div class="amt">${eur(bill.amount)}</div></li>`)
+        .join('')}</ul></div>` : ''}
+
+      ${secHead('Dépenses du mois', 'data-action="add-expense"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${monthExpenses
+        .map((e) => `<li class="row tap" data-action="edit-expense" data-id="${e.id}"><div class="ico-box">${icon('bag')}</div><div class="grow"><div class="t">${esc(e.label)}</div><div class="s">${esc(e.category)} · ${esc(fmtDate(e.date))}</div></div><div class="amt neg">− ${eur(e.amount)}</div></li>`)
+        .join('')}</ul>${monthExpenses.length ? '' : emptyMsg('Aucune dépense ce mois-ci.')}</div>
+
+      ${secHead('Épargne', 'data-action="add-saving"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${money.savings
+        .map((s) => `<li class="row"><div class="ico-box pink">${icon('piggy')}</div><div class="grow tap" data-action="edit-saving" data-id="${s.id}"><div class="t">${esc(s.label)}</div><div class="s"><strong class="num" style="color:var(--text)">${eur(s.amount)}</strong>${s.goal ? ` / ${eur(s.goal)}` : ''}</div>${s.goal ? `<div style="margin-top:6px">${progressBar((s.amount / s.goal) * 100, 'pink')}</div>` : ''}</div><button class="btn sm soft" data-action="deposit-saving" data-id="${s.id}">Verser</button></li>`)
+        .join('')}</ul>${money.savings.length ? '' : emptyMsg('Crée ta première épargne 🐷')}</div>
+
+      ${secHead('Dettes', 'data-action="add-debt"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${money.debts
+        .map((d) => `<li class="row"><div class="grow tap" data-action="edit-debt" data-id="${d.id}"><div class="t">${esc(d.label)}</div><div class="s"><strong class="num" style="color:var(--text)">${eur(d.remaining)}</strong> restants / ${eur(d.total)}</div><div style="margin-top:6px">${progressBar(((d.total - d.remaining) / (d.total || 1)) * 100)}</div></div>${d.remaining > 0 ? `<button class="btn sm" data-action="repay-debt" data-id="${d.id}">Rembourser</button>` : '🎉'}</li>`)
+        .join('')}</ul>${money.debts.length ? '' : emptyMsg('Aucune dette 🎉')}</div>
+    </section>
+  </div>`;
+}
+
+function budgetDetail() {
+  const b = monthBudget();
+  openSheet(
+    'Comment est calculé ton solde',
+    `<ul class="list">
+      <li class="row"><div class="grow">Solde au début du mois</div><span class="amt">${eur(b.carry)}</span><button class="icon-btn sm" data-action="edit-carry" aria-label="Modifier">${icon('pencil')}</button></li>
+      <li class="row"><div class="grow">+ Revenus reçus</div><span class="amt pos">${eur(b.income)}</span></li>
+      <li class="row"><div class="grow">− Loyer, factures, abonnements</div><span class="amt">${eur(b.charges)}</span></li>
+      <li class="row"><div class="grow">− Dépenses du mois</div><span class="amt">${eur(b.expenses)}</span></li>
+      <li class="row"><div class="grow"><strong>= Disponible jusqu’à la fin du mois</strong></div><span class="amt">${eur(b.remaining)}</span></li>
     </ul>
-  </div>
+    ${b.expected ? `<p class="small muted">Encore attendu ce mois-ci : <strong>${eur(b.expected)}</strong> (pas encore compté).</p>` : ''}`,
+  );
+}
 
-  <div class="grid grid-2 section">
-    <div class="card">
-      <div class="section-head"><h2>Revenus réguliers</h2><button class="btn small" data-action="add-income">+ Ajouter</button></div>
-      <ul class="list">${incomesHTML}</ul>${incomesHTML ? '' : emptyMsg('Ajoute ton salaire et la CAF.')}
-      <div class="section-head" style="margin-top:18px"><h2>Revenus exceptionnels</h2><button class="btn small" data-action="add-extra">+ Ajouter</button></div>
-      <ul class="list">${extrasHTML}</ul>${extrasHTML ? '' : emptyMsg('Primes, remboursements, ventes…')}
-    </div>
-    <div class="card">
-      <div class="section-head"><h2>Loyers & charges</h2><button class="btn small" data-action="add-bill">+ Ajouter</button></div>
-      <ul class="list">${billsHTML}</ul>${billsHTML ? '' : emptyMsg('Loyer, électricité, téléphone, abonnements…')}
-    </div>
-  </div>
+/* ============================================================
+   Carrière
+   ============================================================ */
 
-  <div class="grid grid-2 section">
-    <div class="card">
-      <div class="section-head"><h2>Dépenses du mois</h2><button class="btn small" data-action="add-expense">+ Ajouter</button></div>
-      ${cats.length ? `<div class="cat-bars">${cats.map(([c, v]) => `<div class="row" style="display:block"><div class="split small"><span>${esc(c)}</span><span class="num">${eur(v)}</span></div>${progress(v, maxCat, 'accent')}</div>`).join('')}</div><div class="group-label">Détail</div>` : ''}
-      <ul class="list">${expensesHTML}</ul>${expensesHTML ? '' : emptyMsg('Aucune dépense ce mois-ci.')}
+function areaList(area, anchor) {
+  const cfg = AREAS[area];
+  const f = ui.areaFilter[area] || 'all';
+  const list = itemsFor(area).filter((i) => !i.done && (f === 'all' || i.kind === f)).sort(byDateTime);
+  return `<div id="${anchor}">
+    ${secHead(`Tout ${area === 'travail' ? 'le pro' : area === 'ecole' ? "l'école" : 'le perso'}`, `data-action="add-item" data-area="${area}" data-kind="${f === 'all' ? '' : f}"`, 'Ajouter')}
+    <div class="chips in-section">
+      <button class="chip ${f === 'all' ? 'active' : ''}" data-action="area-filter" data-area="${area}" data-kind="all">Tout</button>
+      ${Object.entries(cfg.kinds).map(([k, v]) => `<button class="chip ${f === k ? 'active' : ''}" data-action="area-filter" data-area="${area}" data-kind="${k}">${v.emoji} ${esc(v.label)}</button>`).join('')}
     </div>
-    <div class="card">
-      <div class="section-head"><h2>Épargne</h2><button class="btn small" data-action="add-saving">+ Ajouter</button></div>
-      <ul class="list">${savingsHTML}</ul>${savingsHTML ? '' : emptyMsg('Crée un objectif d’épargne.')}
-      <div class="section-head" style="margin-top:18px"><h2>Dettes</h2><button class="btn small" data-action="add-debt">+ Ajouter</button></div>
-      <ul class="list">${debtsHTML}</ul>${debtsHTML ? '' : emptyMsg('Aucune dette 🎉')}
+    <div class="card flush"><ul class="list">${list.map((i) => taskRow(i)).join('')}</ul>${list.length ? '' : emptyMsg('Rien ici pour le moment.')}</div>
+  </div>`;
+}
+
+function viewCareer() {
+  const items = itemsFor('travail');
+  const goal = topGoal('carriere');
+  const apps = items.filter((i) => i.kind === 'candidature');
+  const sent = apps.filter((i) => ['Envoyée', 'Relancée', 'Entretien', 'Offre', 'Refus'].includes(i.status)).length;
+  const ongoing = apps.filter((i) => !i.done && !['Refus', 'Offre'].includes(i.status)).length;
+  const talks = items.filter((i) => !i.done && (i.kind === 'contact' || i.status === 'Entretien')).length;
+  const trainings = items.filter((i) => i.kind === 'formation' && !i.done && i.status !== 'Terminée').length;
+  const projects = items.filter((i) => i.kind === 'projet' && !i.done);
+
+  const action = (ic, title, sub, kind) => `<li class="row tap" data-action="area-filter" data-area="travail" data-kind="${kind}" data-scroll="pro-list">
+    <div class="ico-box peach">${icon(ic)}</div><div class="grow"><div class="t">${title}</div><div class="s">${sub}</div></div><span class="chev">${icon('right')}</span></li>`;
+
+  return `
+  <header class="dark-head">
+    <div class="head-row"><div><h1 class="title sparkle">Carrière</h1><div class="subtitle">Construis la vie pro que tu veux.</div></div>${backBtn('#/accueil', true)}</div>
+    <div class="hero-card" data-action="${goal ? 'edit-goal' : 'add-goal'}" data-id="${goal?.id || ''}" data-category="carriere">
+      <div class="row1"><div class="ico-box round pink">${icon('target')}</div><div><div class="h">${goal ? esc(goal.title) : 'Définis ton objectif carrière'}</div><div class="s">${goal?.date ? esc(cap(fmtMonth.format(parseISO(goal.date)))) : 'Touche pour le modifier'}</div></div></div>
+      ${goal ? `<div class="between"><span>Avancement</span><strong style="color:#fff">${goal.progress} %</strong></div>${progressBar(goal.progress, 'on-ink')}` : ''}
     </div>
+  </header>
+  <div class="sheet">
+    <section class="section">
+      ${secHead('Mes actions')}
+      <div class="card flush"><ul class="list">
+        ${action('file', 'Candidatures', `${sent} envoyée${sent > 1 ? 's' : ''} · ${ongoing} en cours`, 'candidature')}
+        ${action('users', 'Entretiens / Échanges', `${talks} à venir`, 'contact')}
+        ${action('book', 'Formations', `${trainings} à suivre`, 'formation')}
+      </ul></div>
+      ${secHead('Mes projets', 'data-action="add-item" data-area="travail" data-kind="projet"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${projects
+        .map((p) => `<li class="row tap" data-action="edit-item" data-id="${p.id}"><div class="ico-box">${icon('folder')}</div><div class="grow"><div class="t">${esc(p.title)}</div><div class="s">${esc(p.status || 'En cours')}</div></div><span class="chev">${icon('right')}</span></li>`)
+        .join('')}</ul>${projects.length ? '' : emptyMsg('Ajoute tes projets en cours.')}</div>
+      ${areaList('travail', 'pro-list')}
+    </section>
   </div>`;
 }
 
 /* ============================================================
-   Vue : espaces génériques (Travail, École, Quotidien)
+   École
    ============================================================ */
 
-function itemsListHTML(area) {
-  const cfg = AREAS[area];
-  const filter = ui.filters[area] || 'all';
-  const showDone = !!ui.showDone[area];
-  const all = itemsFor(area);
+function viewSchool() {
+  const sch = state.settings.school;
+  const pct = schoolProgress();
   const t = todayISO();
-  const visible = all.filter((i) => filter === 'all' || i.kind === filter);
-  const open = visible.filter((i) => !i.done);
-  const done = visible.filter((i) => i.done);
-
-  const groups = [
-    ['En retard', open.filter((i) => i.date && i.date < t), 'bad'],
-    ["Aujourd'hui", open.filter((i) => i.date === t), ''],
-    ['À venir', open.filter((i) => i.date && i.date > t).sort((a, b) => a.date.localeCompare(b.date)), ''],
-    ['Sans date', open.filter((i) => !i.date), ''],
-  ];
-
-  const chips = [
-    `<button class="chip ${filter === 'all' ? 'active' : ''}" data-action="filter" data-area="${area}" data-kind="all">Tout<span class="n">${all.filter((i) => !i.done).length}</span></button>`,
-    ...Object.entries(cfg.kinds).map(([k, v]) => {
-      const n = all.filter((i) => i.kind === k && !i.done).length;
-      return `<button class="chip ${filter === k ? 'active' : ''}" data-action="filter" data-area="${area}" data-kind="${k}">${v.emoji} ${esc(v.label)}<span class="n">${n}</span></button>`;
-    }),
-  ].join('');
-
-  const body = groups
-    .filter(([, list]) => list.length)
-    .map(([label, list, cls]) => `<div class="group-label ${cls}">${label} · ${list.length}</div><ul class="list">${list.map((i) => itemRow(i)).join('')}</ul>`)
-    .join('');
+  const items = itemsFor('ecole').filter((i) => !i.done);
+  const deadlines = items.filter((i) => i.kind !== 'cours' && i.date).sort(byDateTime).slice(0, 6);
+  const courses = items.filter((i) => i.kind === 'cours');
+  const ic = { examen: 'school', rattrapage: 'calendar', toeic: 'book', devoir: 'file', echeance: 'clock', document: 'file' };
 
   return `
-    <div class="chips">${chips}</div>
-    <div class="card">
-      ${body || emptyMsg(filter === 'all' ? 'Rien en cours ici. Ajoute un premier élément !' : 'Rien dans cette catégorie.')}
-      <div class="split" style="margin-top:12px">
-        <button class="btn small ghost" data-action="toggle-show-done" data-area="${area}">${showDone ? 'Masquer' : 'Afficher'} les éléments terminés (${done.length})</button>
-        ${showDone && done.length ? `<button class="btn small danger" data-action="clear-done" data-area="${area}">Vider les terminés</button>` : ''}
-      </div>
-      ${showDone && done.length ? `<ul class="list">${done.map((i) => itemRow(i)).join('')}</ul>` : ''}
-    </div>`;
-}
-
-function viewArea(area) {
-  const cfg = AREAS[area];
-  const filter = ui.filters[area] || 'all';
-  const all = itemsFor(area).filter((i) => !i.done);
-  const t = todayISO();
-  const late = all.filter((i) => i.date && i.date < t).length;
-  const week = all.filter((i) => i.date && i.date >= t && i.date <= addDays(t, 7)).length;
-
-  let extraTiles = '';
-  if (area === 'travail') {
-    const apps = itemsFor('travail').filter((i) => i.kind === 'candidature');
-    const active = apps.filter((i) => !['Refus', 'Offre'].includes(i.status) && !i.done).length;
-    extraTiles = tile('Candidatures actives', active, `${apps.length} au total`, 'accent');
-  } else if (area === 'ecole') {
-    const exams = all.filter((i) => ['examen', 'rattrapage', 'toeic'].includes(i.kind) && i.date && i.date >= t).sort((a, b) => a.date.localeCompare(b.date));
-    extraTiles = tile('Prochain examen', exams[0] ? esc(inDays(daysBetween(t, exams[0].date))) : '—', exams[0] ? esc(exams[0].title) : 'aucun prévu', 'accent');
-  } else if (area === 'quotidien') {
-    const subs = state.money.bills.filter((b) => b.category === 'abonnement');
-    extraTiles = tile('Abonnements', eur(sum(subs, (b) => b.amount)), `${subs.length} par mois`, 'accent');
-  }
-
-  let quotidienExtras = '';
-  if (area === 'quotidien') {
-    const dow = new Date().getDay();
-    const routinesHTML = state.routines
-      .map((r) => {
-        const today = r.days.includes(dow);
-        const doneToday = !!r.log[todayISO()];
-        const streak = routineStreak(r);
-        return `<li class="row ${doneToday ? 'is-done' : ''}">
-          ${today ? `<input type="checkbox" class="check" data-action="toggle-routine" data-id="${r.id}" ${doneToday ? 'checked' : ''} aria-label="Fait aujourd'hui" />` : '<span style="width:22px"></span>'}
-          <div class="grow clickable" data-action="edit-routine" data-id="${r.id}">
-            <div class="title">${esc(r.emoji)} ${esc(r.label)}</div>
-            <div class="meta"><span>${[1, 2, 3, 4, 5, 6, 0].filter((d) => r.days.includes(d)).map((d) => WEEKDAYS[d]).join(' · ') || 'Aucun jour'}</span>${streak > 1 ? `<span class="badge good">🔥 ${streak} fois de suite</span>` : ''}${today ? '<span class="badge info">aujourd’hui</span>' : ''}</div>
-          </div>
-        </li>`;
-      })
-      .join('');
-    const billsHTML = state.money.bills
-      .filter((b) => ['abonnement', 'facture'].includes(b.category))
-      .sort((a, b) => a.day - b.day)
-      .map((b) => {
-        const paid = b.paid.includes(monthKey());
-        return `<li class="row clickable ${paid ? 'is-done' : ''}" data-action="edit-bill" data-id="${b.id}">
-          <div class="grow"><div class="title">${esc(b.label)}</div><div class="meta"><span>${esc(BILL_CATEGORIES[b.category])} · le ${b.day}</span>${paid ? '<span class="badge good">Payé</span>' : ''}</div></div>
-          <span class="amount">${eur(b.amount)}</span></li>`;
-      })
-      .join('');
-    quotidienExtras = `
-    <div class="grid grid-2 section">
-      <div class="card">
-        <div class="section-head"><h2>Routines</h2><button class="btn small" data-action="add-routine">+ Ajouter</button></div>
-        <ul class="list">${routinesHTML}</ul>${routinesHTML ? '' : emptyMsg('Sport, lecture, ménage…')}
-      </div>
-      <div class="card">
-        <div class="section-head"><h2>Abonnements & factures</h2><button class="btn small" data-action="add-bill" data-category="abonnement">+ Ajouter</button></div>
-        <ul class="list">${billsHTML}</ul>${billsHTML ? '' : emptyMsg('Téléphone, internet, streaming, électricité…')}
-      </div>
-    </div>`;
-  }
-
-  return `
-  <header class="page-head">
-    <div><h1>${cfg.emoji} ${esc(cfg.label)}</h1><div class="sub">${all.length} élément(s) en cours</div></div>
-    <div class="head-actions"><button class="btn primary" data-action="add-item" data-area="${area}" data-kind="${filter === 'all' ? '' : filter}">+ Ajouter</button></div>
+  <header class="dark-head">
+    <div class="head-row"><div><h1 class="title sparkle">École</h1><div class="subtitle">Apprends aujourd’hui, construis demain.</div></div>${backBtn('#/accueil', true)}</div>
+    <div class="hero-card" data-action="edit-school">
+      <div class="row1"><div class="ico-box round pink">${icon('school')}</div><div><div class="h">${esc(sch.program || 'Ma formation')}</div><div class="s">${esc(sch.school || 'Touche pour renseigner ton école')}${sch.end ? ` – fin ${esc(fmtMonthShort.format(parseISO(sch.end)))}` : ''}</div></div></div>
+      ${pct !== null ? `<div class="between"><span>Année en cours</span><strong style="color:#fff">${pct} %</strong></div>${progressBar(pct, 'on-ink')}` : ''}
+    </div>
   </header>
-  <div class="grid grid-tiles" style="margin-bottom:20px">
-    ${tile('En retard', late, '', late ? 'bad' : '')}
-    ${tile('Cette semaine', week)}
-    ${extraTiles}
-  </div>
-  ${itemsListHTML(area)}
-  ${quotidienExtras}`;
-}
-
-function routineStreak(r) {
-  // Nombre de jours prévus consécutifs réalisés, en remontant depuis aujourd'hui (aujourd'hui non bloquant).
-  let streak = 0;
-  let d = todayISO();
-  for (let i = 0; i < 120; i++) {
-    const dow = parseISO(d).getDay();
-    if (r.days.includes(dow)) {
-      if (r.log[d]) streak++;
-      else if (i > 0) break;
-    }
-    d = addDays(d, -1);
-  }
-  return streak;
+  <div class="sheet">
+    <section class="section">
+      ${secHead('Mes échéances', 'data-action="add-item" data-area="ecole" data-kind="devoir"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${deadlines
+        .map((i) => `<li class="row tap" data-action="edit-item" data-id="${i.id}"><div class="ico-box">${icon(ic[i.kind] || 'file')}</div><div class="grow"><div class="t">${esc(i.title)}</div><div class="s">${esc(i.notes || kindOf(i).label)}</div></div><div class="r">${esc(daysBetween(t, i.date) < 0 ? 'en retard' : dayLabel(i.date))}</div></li>`)
+        .join('')}</ul>${deadlines.length ? '' : emptyMsg('Aucune échéance à venir.')}</div>
+      ${secHead('Mes cours / projets', 'data-action="add-item" data-area="ecole" data-kind="cours"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${courses
+        .map((i) => `<li class="row tap" data-action="edit-item" data-id="${i.id}"><div class="ico-box peach">${icon('book')}</div><div class="grow"><div class="t">${esc(i.title)}</div><div class="s">${esc(i.notes || i.status || '')}</div></div>${i.status ? `<span class="status pink">${esc(i.status)}</span>` : ''}</li>`)
+        .join('')}</ul>${courses.length ? '' : emptyMsg('Ajoute tes cours et projets.')}</div>
+      ${areaList('ecole', 'school-list')}
+    </section>
+  </div>`;
 }
 
 /* ============================================================
-   Vue : Voyages
+   Voyages
    ============================================================ */
 
 function viewTrips() {
+  const trip = nextTrip();
   const t = todayISO();
-  const order = (tr) => (tr.status === 'Terminé' ? 3 : tr.start ? (tr.start >= t ? 0 : 2) : 1);
+  const order = (tr) => (tr.status === 'Terminé' ? 2 : tr.start ? 0 : 1);
   const trips = state.trips.slice().sort((a, b) => order(a) - order(b) || (a.start || '').localeCompare(b.start || ''));
-
-  const cards = trips
-    .map((tr) => {
-      const open = ui.openTrips.has(tr.id);
-      const spent = sum(tr.bookings, (b) => b.cost);
-      const doneCount = tr.checklist.filter((c) => c.done).length;
-      const d = tr.start ? daysBetween(t, tr.start) : null;
-      const nights = tr.start && tr.end ? daysBetween(tr.start, tr.end) : null;
-      const statusCls = { Envisagé: '', 'En préparation': 'warn', Réservé: 'good', Terminé: '' }[tr.status] || '';
-      return `<div class="card">
-        <div class="trip-head" data-action="toggle-trip" data-id="${tr.id}">
-          <div>
-            <h3>✈️ ${esc(tr.destination)}</h3>
-            <div class="meta muted small" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-              <span class="badge ${statusCls}">${esc(tr.status)}</span>
-              <span>${tr.start ? `${esc(fmtDate(tr.start))}${tr.end ? ` → ${esc(fmtDate(tr.end))}` : ''}${nights ? ` · ${nights} nuit${nights > 1 ? 's' : ''}` : ''}` : 'Dates à définir'}</span>
-            </div>
-          </div>
-          ${d !== null && d >= 0 ? `<div class="trip-countdown"><div class="value">J-${d}</div><div class="label">avant le départ</div></div>` : ''}
-        </div>
-        <div style="margin-top:12px">
-          <div class="split small"><span>Budget : <strong class="num">${eur(spent)}</strong> réservés sur <span class="num">${eur(tr.budget)}</span></span><span class="muted">Checklist ${doneCount}/${tr.checklist.length}</span></div>
-          ${progress(spent, tr.budget || spent || 1, spent > tr.budget && tr.budget ? 'bad' : 'accent')}
-        </div>
-        ${open ? tripBody(tr) : `<button class="btn small ghost" style="margin-top:10px" data-action="toggle-trip" data-id="${tr.id}">Voir le détail ▾</button>`}
-      </div>`;
-    })
-    .join('');
-
-  const totalPlanned = sum(state.trips.filter((tr) => tr.status !== 'Terminé'), (tr) => tr.budget);
+  const spent = trip ? tripSpent(trip) : 0;
+  const datesLabel = (tr) => (tr.start ? `Du ${parseISO(tr.start).getDate()}${tr.end ? ` au ${fmtLongNoYear.format(parseISO(tr.end)).replace(/^\S+ /, '')}` : ''} ${parseISO(tr.end || tr.start).getFullYear()}` : 'Dates à définir');
 
   return `
-  <header class="page-head">
-    <div><h1>✈️ Voyages</h1><div class="sub">${state.trips.length} voyage(s) · ${eur(totalPlanned)} de budget prévu</div></div>
-    <div class="head-actions"><button class="btn primary" data-action="add-trip">+ Nouveau voyage</button></div>
+  <header class="dark-head">
+    <div class="head-row"><div><h1 class="title sparkle">Voyages</h1><div class="subtitle">Découvre le monde, à ton rythme.</div></div>${backBtn('#/accueil', true)}</div>
+    ${trip ? `<a class="photo-card ${trip.image ? '' : 'no-photo'}" href="#/voyage/${trip.id}" ${trip.image ? `style="background-image:url('${esc(trip.image)}')"` : ''}>
+      <div class="k">Prochain voyage${trip.start && trip.start >= t ? ` · J-${daysBetween(t, trip.start)}` : ''}</div>
+      <div class="h">${esc(trip.destination)} ${esc(trip.emoji || '')}</div>
+      <div class="k">${esc(datesLabel(trip))}</div>
+      <span class="edit icon-btn ghost sm" style="background:rgba(255,255,255,.2);color:#fff">${icon('pencil')}</span>
+    </a>` : `<button class="photo-card no-photo" data-action="add-trip" style="border:0;color:#fff;text-align:left;width:100%"><div class="h">Ton prochain voyage ✈️</div><div class="k">Touche pour l’ajouter</div></button>`}
   </header>
-  <div class="grid grid-2">${cards}</div>
-  ${cards ? '' : `<div class="card">${emptyMsg('Aucun voyage pour le moment. Où as-tu envie d’aller ?')}</div>`}`;
-}
-
-function tripBody(tr) {
-  const bookings = tr.bookings
-    .map((b) => `<li class="row clickable" data-action="edit-booking" data-trip="${tr.id}" data-id="${b.id}">
-      <div class="grow"><div class="title">${esc(BOOKING_KINDS[b.kind] || '')} · ${esc(b.label)}</div></div>
-      <span class="badge ${b.booked ? 'good' : 'warn'}">${b.booked ? 'Réservé' : 'À réserver'}</span>
-      <span class="amount">${eur(b.cost)}</span></li>`)
-    .join('');
-  const checklist = tr.checklist
-    .map((c) => `<li class="row ${c.done ? 'is-done' : ''}">
-      <input type="checkbox" class="check" data-action="toggle-check" data-trip="${tr.id}" data-id="${c.id}" ${c.done ? 'checked' : ''} aria-label="Fait" />
-      <div class="grow"><div class="title">${esc(c.text)}</div></div>
-      <button class="icon-btn" data-action="del-check" data-trip="${tr.id}" data-id="${c.id}" aria-label="Retirer">✕</button></li>`)
-    .join('');
-  return `<div class="trip-body">
-    <div class="section-head" style="margin-top:10px"><h2>Billets & hôtels</h2><button class="btn small" data-action="add-booking" data-trip="${tr.id}">+ Ajouter</button></div>
-    <ul class="list">${bookings}</ul>${bookings ? '' : emptyMsg('Aucune réservation.')}
-    <div class="section-head" style="margin-top:16px"><h2>Checklist</h2></div>
-    <ul class="list">${checklist}</ul>
-    <form class="inline-add" data-form="add-check" data-trip="${tr.id}">
-      <input name="text" placeholder="Ajouter à la checklist…" autocomplete="off" />
-      <button class="btn small" type="submit">Ajouter</button>
-    </form>
-    ${tr.notes ? `<div class="section-head" style="margin-top:16px"><h2>Documents & notes</h2></div><div class="small" style="white-space:pre-wrap">${esc(tr.notes)}</div>` : ''}
-    <div class="split" style="margin-top:16px">
-      <button class="btn small ghost" data-action="toggle-trip" data-id="${tr.id}">Replier ▴</button>
-      <button class="btn small" data-action="edit-trip" data-id="${tr.id}">Modifier le voyage</button>
-    </div>
+  <div class="sheet">
+    <section class="section">
+      ${trip ? `${secHead('Budget', `#/voyage/${trip.id}`)}
+      <div class="card">
+        <div class="between"><span style="font-size:22px;font-weight:800">${eur(spent)} <span class="muted small">/ ${eur(trip.budget)}</span></span></div>
+        <div class="mt">${progressBar((spent / (trip.budget || 1)) * 100, spent > trip.budget ? 'bad' : 'leo')}</div>
+        <div class="small mt">Reste : <strong>${eur((trip.budget || 0) - spent)}</strong></div>
+      </div>` : ''}
+      ${secHead('Mes voyages', 'data-action="add-trip"', 'Ajouter')}
+      <div class="card flush"><ul class="list">${trips
+        .map((tr) => `<li class="row tap" data-action="goto" data-href="#/voyage/${tr.id}"><div class="ico-box round" style="font-size:22px">${esc(tr.emoji || '✈️')}</div><div class="grow"><div class="t">${esc(tr.destination)}</div><div class="s">${tr.start ? esc(cap(fmtMonthShort.format(parseISO(tr.start)))) : esc(tr.notes || 'Dates à définir')}</div></div><span class="status ${TRIP_STATUS_CLASS[tr.status] || ''}">${tr.status === 'Planifié' || tr.status === 'Réservé' ? '✓ ' : ''}${esc(tr.status)}</span></li>`)
+        .join('')}</ul>${trips.length ? '' : emptyMsg('Où as-tu envie d’aller ?')}</div>
+    </section>
   </div>`;
 }
 
-function affirmationOfDay() {
-  const list = state.manifest.affirmations;
-  if (!list.length) return null;
-  const dayNumber = Math.floor(parseISO(todayISO()).getTime() / 86400000);
-  return list[(((dayNumber + ui.affShift) % list.length) + list.length) % list.length];
+function viewTrip(id) {
+  const tr = findById(state.trips, id);
+  if (!tr) return viewTrips();
+  const t = todayISO();
+  const spent = tripSpent(tr);
+  const doneCount = tr.checklist.filter((c) => c.done).length;
+  return `
+  <header class="dark-head">
+    <div class="head-row"><div><h1 class="title">${esc(tr.destination)} ${esc(tr.emoji || '')}</h1><div class="subtitle">${tr.start ? `${esc(fmtDate(tr.start))}${tr.end ? ` → ${esc(fmtDate(tr.end))}` : ''}` : 'Dates à définir'} · <span class="status ${TRIP_STATUS_CLASS[tr.status] || ''}">${esc(tr.status)}</span></div></div>${backBtn('#/voyages', true)}</div>
+    <div class="photo-card ${tr.image ? '' : 'no-photo'}" data-action="edit-trip" data-id="${tr.id}" ${tr.image ? `style="background-image:url('${esc(tr.image)}')"` : ''}>
+      ${tr.start && tr.start >= t ? `<div class="h">J-${daysBetween(t, tr.start)}</div><div class="k">avant le départ</div>` : `<div class="k">Touche pour ajouter une photo</div>`}
+      <span class="edit icon-btn ghost sm" style="background:rgba(255,255,255,.2);color:#fff">${icon('pencil')}</span>
+    </div>
+  </header>
+  <div class="sheet">
+    <section class="section">
+      ${secHead('Budget')}
+      <div class="card">
+        <div style="font-size:22px;font-weight:800">${eur(spent)} <span class="muted small">/ ${eur(tr.budget)}</span></div>
+        <div class="mt">${progressBar((spent / (tr.budget || 1)) * 100, spent > tr.budget ? 'bad' : 'leo')}</div>
+        <div class="small mt">Reste : <strong>${eur((tr.budget || 0) - spent)}</strong></div>
+      </div>
+      ${secHead('Billets & hôtels', `data-action="add-booking" data-trip="${tr.id}"`, 'Ajouter')}
+      <div class="card flush"><ul class="list">${tr.bookings
+        .map((b) => `<li class="row tap" data-action="edit-booking" data-trip="${tr.id}" data-id="${b.id}"><div class="grow"><div class="t">${esc(b.label)}</div><div class="s">${esc(BOOKING_KINDS[b.kind] || '')}</div></div><div class="r"><div class="amt">${eur(b.cost)}</div><span class="status ${b.booked ? 'good' : 'warn'}">${b.booked ? '✓ Réservé' : 'À réserver'}</span></div></li>`)
+        .join('')}</ul>${tr.bookings.length ? '' : emptyMsg('Aucune réservation.')}</div>
+      ${secHead(`Checklist · ${doneCount}/${tr.checklist.length}`)}
+      <div class="card flush"><ul class="list">${tr.checklist
+        .map((c) => `<li class="row ${c.done ? 'done' : ''}"><input type="checkbox" class="circle" data-action="toggle-check" data-trip="${tr.id}" data-id="${c.id}" ${c.done ? 'checked' : ''} aria-label="Fait" /><div class="grow"><div class="t">${esc(c.text)}</div></div><button class="icon-btn sm" data-action="del-check" data-trip="${tr.id}" data-id="${c.id}" aria-label="Retirer">${icon('x')}</button></li>`)
+        .join('')}</ul>
+        <form class="inline-add" data-form="add-check" data-trip="${tr.id}" style="padding-bottom:12px"><input class="input" name="text" placeholder="Ajouter à la checklist…" autocomplete="off" /><button class="btn sm pink" type="submit">Ajouter</button></form>
+      </div>
+      ${tr.notes ? `${secHead('Documents & notes')}<div class="card small" style="white-space:pre-wrap">${esc(tr.notes)}</div>` : ''}
+      <div class="add-pill"><button class="btn soft" data-action="edit-trip" data-id="${tr.id}">${icon('pencil')} Modifier le voyage</button></div>
+    </section>
+  </div>`;
 }
 
-function gratitudeStreak() {
-  let streak = 0;
-  let d = todayISO();
-  const has = (day) => (state.manifest.gratitude[day] || []).some((x) => x.trim());
-  if (!has(d)) d = addDays(d, -1);
-  while (has(d)) {
-    streak++;
-    d = addDays(d, -1);
-  }
-  return streak;
+/* ============================================================
+   Objectifs
+   ============================================================ */
+
+function viewGoals() {
+  const dreams = state.manifest.dreams;
+  const used = Object.keys(DREAM_CATEGORIES).filter((k) => dreams.some((d) => d.category === k));
+  const f = ui.goalFilter;
+  const list = dreams.filter((d) => f === 'all' || d.category === f).sort((a, b) => Number(a.manifested) - Number(b.manifested) || b.progress - a.progress);
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Objectifs</h1><div class="subtitle">Petits pas, grands rêves.</div></div>${backBtn('#/accueil')}</div>
+  </header>
+  <div class="chips">
+    <button class="chip ${f === 'all' ? 'active' : ''}" data-action="goal-filter" data-filter="all">Tous</button>
+    ${used.map((k) => `<button class="chip ${f === k ? 'active' : ''}" data-action="goal-filter" data-filter="${k}">${esc(DREAM_CATEGORIES[k].label)}</button>`).join('')}
+  </div>
+  <section class="section" style="margin-top:8px">
+    ${list.map(goalCard).join('') || `<div class="card">${emptyMsg('Quel est ton prochain grand rêve ?')}</div>`}
+    <button class="btn pink block" data-action="add-goal" data-category="${f === 'all' ? '' : f}">${icon('plus')} Ajouter un objectif</button>
+  </section>`;
 }
+
+/* ============================================================
+   Manifestation
+   ============================================================ */
 
 function viewManifest() {
   const mf = state.manifest;
   const aff = affirmationOfDay();
   const t = todayISO();
-  const todayGrat = mf.gratitude[t] || ['', '', ''];
-  const dreams = mf.dreams.slice().sort((a, b) => Number(a.manifested) - Number(b.manifested) || (a.date || '9').localeCompare(b.date || '9'));
-  const manifested = mf.dreams.filter((d) => d.manifested).length;
+  const g = mf.gratitude[t] || [];
   const streak = gratitudeStreak();
-
-  const dreamsHTML = dreams
-    .map((d) => {
-      const bg = d.image ? ` style="background-image:url('${esc(d.image)}')"` : '';
-      const when = d.date && !d.manifested ? `<span>${esc(daysBetween(t, d.date) >= 0 ? inDays(daysBetween(t, d.date)) : fmtDate(d.date))}</span>` : '';
-      return `<div class="dream ${d.image ? '' : 'no-img'} ${d.manifested ? 'manifested' : ''}" data-action="edit-dream" data-id="${d.id}"${bg} role="button" tabindex="0">
-        ${d.image ? '' : `<span class="dream-emoji">${esc(d.emoji || '✨')}</span>`}
-        ${d.manifested ? '<span class="ribbon">Manifesté ✨</span>' : ''}
-        <div class="dream-text">
-          <div class="dream-title">${d.image ? esc(d.emoji || '') + ' ' : ''}${esc(d.title)}</div>
-          <div class="dream-meta"><span>${esc(DREAM_CATEGORIES[d.category] || '')}</span>${when}</div>
-        </div>
-      </div>`;
-    })
-    .join('');
-
+  const dreams = mf.dreams.slice().sort((a, b) => Number(a.manifested) - Number(b.manifested));
   const history = Object.keys(mf.gratitude)
-    .filter((day) => day < t && mf.gratitude[day].some((x) => x.trim()))
+    .filter((d) => d < t && mf.gratitude[d].some((x) => x.trim()))
     .sort()
     .reverse()
-    .slice(0, 7)
-    .map((day) => `<div class="gratitude-day"><div class="small muted">${esc(capitalize(dateLong.format(parseISO(day))))}</div><ul>${mf.gratitude[day].filter((x) => x.trim()).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`)
-    .join('');
+    .slice(0, 5);
 
   return `
-  <header class="page-head">
-    <div><h1>✨ Manifestation</h1><div class="sub">Visualise, remercie, attire.</div></div>
-    <div class="head-actions"><button class="btn primary" data-action="add-dream">+ Nouveau rêve</button></div>
-  </header>
-
-  <section class="affirmation leopard">
-    <div class="affirmation-inner">
-      <div class="kicker">Mon affirmation du jour</div>
-      <blockquote>${aff ? `« ${esc(aff.text)} »` : 'Ajoute ta première affirmation ci-dessous 💕'}</blockquote>
-      ${mf.affirmations.length > 1 ? '<button class="btn small" data-action="next-affirmation">🔄 Une autre</button>' : ''}
-    </div>
+  <section class="mani-hero">
+    <div class="between" style="margin-bottom:6px"><span></span>${backBtn('#/menu', true)}</div>
+    <div class="date">${esc(cap(fmtLong.format(new Date())))}</div>
+    <h1>Tu fais déjà un super travail <span class="heart">♥</span></h1>
+    <div class="stickers">${STICKERS.map(([w, r]) => `<div class="sticker" style="--rot:${r}">${w}</div>`).join('')}</div>
   </section>
 
-  <div class="grid grid-tiles section">
-    ${tile('Rêves en cours', mf.dreams.length - manifested, '', 'accent')}
-    ${tile('Déjà manifestés', manifested, manifested ? 'la preuve que ça marche ✨' : 'le premier arrive…', 'accent')}
-    ${tile('Gratitude', `${streak} jour${streak > 1 ? 's' : ''}`, 'de suite', 'accent')}
-  </div>
+  ${aff ? `<div class="aff-card"><div class="inner">
+    <div class="kicker">✦ Mon affirmation du jour ✦</div>
+    <blockquote>« ${esc(aff.text)} »</blockquote>
+    ${mf.affirmations.length > 1 ? '<button class="btn sm soft" data-action="next-affirmation">🔄 Une autre</button>' : ''}
+  </div></div>` : ''}
 
-  <div class="section">
-    <div class="section-head"><h2>💖 Mon vision board</h2><span class="hint">Touche un rêve pour le modifier ou ajouter une photo</span></div>
-    <div class="dreams">${dreamsHTML}<button class="dream-add" data-action="add-dream">+ Ajouter un rêve</button></div>
-  </div>
-
-  <div class="grid grid-2 section">
+  <section class="section">
+    ${secHead('🙏 Gratitude du jour', '', '')}
     <div class="card">
-      <div class="section-head"><h2>🙏 Gratitude du jour</h2><span class="hint">3 choses pour lesquelles je dis merci</span></div>
-      <form class="gratitude-form" data-form="gratitude">
-        ${[0, 1, 2].map((i) => `<label><span class="n">${i + 1}</span><input class="input" name="g${i}" value="${esc(todayGrat[i] || '')}" placeholder="${['Aujourd’hui je suis reconnaissante pour…', 'Une personne qui compte pour moi…', 'Une petite victoire du jour…'][i]}" autocomplete="off" /></label>`).join('')}
-        <div><button class="btn primary small" type="submit">Enregistrer</button></div>
+      <form class="grat" data-form="gratitude">
+        ${[0, 1, 2].map((i) => `<label><span class="n">${i + 1}</span><input class="input" name="g${i}" value="${esc(g[i] || '')}" placeholder="${['Je suis reconnaissante pour…', 'Une personne qui compte…', 'Une petite victoire…'][i]}" autocomplete="off" /></label>`).join('')}
+        <div class="between"><span class="small muted">${streak ? `🔥 ${plural(streak, 'jour')} de suite` : 'Commence ta série aujourd’hui'}</span><button class="btn sm pink" type="submit">Enregistrer</button></div>
       </form>
-      ${history ? `<div class="group-label">Les jours précédents</div>${history}` : ''}
+      ${history.length ? `<div class="group-label">Les jours précédents</div>${history.map((d) => `<div class="small" style="padding:6px 4px"><strong>${esc(cap(fmtLongNoYear.format(parseISO(d))))}</strong> — ${mf.gratitude[d].filter((x) => x.trim()).map(esc).join(' · ')}</div>`).join('')}` : ''}
     </div>
-    <div class="card">
-      <div class="section-head"><h2>💬 Mes affirmations</h2><span class="hint">${mf.affirmations.length}</span></div>
+
+    ${secHead('💖 Mon vision board', '#/objectifs', 'Objectifs')}
+    <div class="dreams">
+      ${dreams
+        .map((d) => `<div class="dream" data-action="edit-goal" data-id="${d.id}" role="button" tabindex="0" ${d.image ? `style="background-image:url('${esc(d.image)}')"` : ''}>
+          ${d.image ? '' : `<span class="emo">${esc(d.emoji || '✨')}</span>`}
+          ${d.manifested ? '<span class="ribbon">Réalisé ✨</span>' : ''}
+          <div class="txt">${d.image ? `${esc(d.emoji || '')} ` : ''}${esc(d.title)}</div>
+        </div>`)
+        .join('')}
+      <button class="dream-add" data-action="add-goal">+ Ajouter un rêve</button>
+    </div>
+
+    ${secHead('💬 Mes affirmations', '', '')}
+    <div class="card flush">
       <ul class="list">${mf.affirmations
-        .map((a) => `<li class="row"><div class="grow"><div class="title" style="font-style:italic">${esc(a.text)}</div></div><button class="icon-btn" data-action="del-affirmation" data-id="${a.id}" aria-label="Retirer">✕</button></li>`)
+        .map((a) => `<li class="row"><div class="grow"><div class="t" style="font-style:italic;font-weight:500">${esc(a.text)}</div></div><button class="icon-btn sm" data-action="del-affirmation" data-id="${a.id}" aria-label="Retirer">${icon('x')}</button></li>`)
         .join('')}</ul>
-      <form class="inline-add" data-form="add-affirmation">
-        <input name="text" placeholder="J’attire… / Je suis… / Je mérite…" autocomplete="off" />
-        <button class="btn small" type="submit">Ajouter</button>
-      </form>
+      <form class="inline-add" data-form="add-affirmation" style="padding-bottom:12px"><input class="input" name="text" placeholder="J’attire… / Je suis… / Je mérite…" autocomplete="off" /><button class="btn sm pink" type="submit">Ajouter</button></form>
     </div>
-  </div>`;
+  </section>`;
 }
 
 /* ============================================================
-   Vue : Réglages
+   Perso (vie quotidienne)
    ============================================================ */
 
-const CLOUD_LABELS = {
-  off: '',
-  'signed-out': 'Non connectée',
-  syncing: '🔄 Synchronisation…',
-  pending: '⏳ Modifications en attente…',
-  ok: '✅ Synchronisé',
-  error: '⚠️ Erreur',
-};
-
-function cloudStatusText(s = cloudStatus()) {
-  return [CLOUD_LABELS[s.state], s.message].filter(Boolean).join(' — ');
+function viewPerso() {
+  const dow = new Date().getDay();
+  const subs = state.money.bills.filter((b) => ['abonnement', 'facture'].includes(b.category)).sort((a, b) => a.day - b.day);
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Perso</h1><div class="subtitle">Courses, admin, routines & abonnements.</div></div>${backBtn('#/menu')}</div>
+  </header>
+  <section class="section">
+    ${secHead('Mes routines', 'data-action="add-routine"', 'Ajouter')}
+    <div class="card flush"><ul class="list">${state.routines
+      .map((r) => `<li class="row tap" data-action="edit-routine" data-id="${r.id}"><div class="ico-box">${esc(r.emoji)}</div><div class="grow"><div class="t">${esc(r.label)}</div><div class="s">${[1, 2, 3, 4, 5, 6, 0].filter((d) => r.days.includes(d)).map((d) => WEEKDAYS[d]).join(' · ') || 'Aucun jour'}${r.time ? ` · ${esc(fmtTime(r.time))}` : ''}</div></div>${r.days.includes(dow) ? '<span class="badge pink">aujourd’hui</span>' : ''}</li>`)
+      .join('')}</ul>${state.routines.length ? '' : emptyMsg('Sport, skincare, lecture…')}</div>
+    ${areaList('quotidien', 'perso-list')}
+    ${secHead('Abonnements & factures', 'data-action="add-bill" data-category="abonnement"', 'Ajouter')}
+    <div class="card flush"><ul class="list">${subs
+      .map((b) => `<li class="row tap" data-action="edit-bill" data-id="${b.id}"><div class="ico-box">${icon('receipt')}</div><div class="grow"><div class="t">${esc(b.label)}</div><div class="s">${esc(BILL_CATEGORIES[b.category])} · le ${b.day}</div></div><div class="amt">${eur(b.amount)}</div></li>`)
+      .join('')}</ul>${subs.length ? `<div class="between small" style="padding:10px 2px"><span class="muted">Total par mois</span><strong>${eur(sum(subs, (b) => b.amount))}</strong></div>` : emptyMsg('Téléphone, streaming, salle de sport…')}</div>
+  </section>`;
 }
+
+function viewDocuments() {
+  const docs = state.items.filter((i) => ['document', 'renouvellement', 'demarche'].includes(i.kind)).sort(byDateTime);
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Mes documents</h1><div class="subtitle">Papiers, renouvellements, démarches.</div></div>${backBtn('#/menu')}</div>
+  </header>
+  <section class="section">
+    <div class="card flush"><ul class="list">${docs.map((i) => taskRow(i)).join('')}</ul>${docs.length ? '' : emptyMsg('Aucun document suivi.')}</div>
+    <div class="add-pill"><button class="btn soft" data-action="add-item" data-area="quotidien" data-kind="renouvellement">${icon('plus')} Ajouter un document</button></div>
+  </section>`;
+}
+
+/* ============================================================
+   Menu & réglages
+   ============================================================ */
+
+function avatarHTML() {
+  const s = state.settings;
+  return s.photo
+    ? `<button class="avatar" data-action="edit-profile" style="background-image:url('${esc(s.photo)}')" aria-label="Modifier mon profil"></button>`
+    : `<button class="avatar" data-action="edit-profile" aria-label="Ajouter une photo"><span style="background:var(--glass);border-radius:50%;width:44px;height:44px;display:grid;place-items:center">${esc((s.name || 'M').charAt(0))}</span></button>`;
+}
+
+function viewMenu() {
+  const s = state.settings;
+  const sc = (href, ic, label, cls = '') => `<a class="shortcut" href="${href}"><span class="ico-box ${cls}">${icon(ic)}</span>${label}</a>`;
+  const line = (href, ic, label, extra = '') => `<li><a class="row" href="${href}"><div class="ico-box">${icon(ic)}</div><div class="grow t">${label}</div>${extra}<span class="chev">${icon('right')}</span></a></li>`;
+  return `
+  <header class="head">
+    <div class="card"><div class="profile">${avatarHTML()}<div><div class="n">${esc(s.name)}</div><div class="tagline">${esc(s.tagline)} <span style="color:var(--pink)">♥</span></div></div></div></div>
+  </header>
+  <section class="section">
+    ${secHead('Mes espaces')}
+    <div class="shortcuts">
+      ${sc('#/argent', 'wallet', 'Argent', 'pink')}
+      ${sc('#/carriere', 'briefcase', 'Carrière', 'peach')}
+      ${sc('#/ecole', 'school', 'École', 'lilac')}
+      ${sc('#/voyages', 'plane', 'Voyages', 'pink')}
+      ${sc('#/objectifs', 'target', 'Objectifs', 'lilac')}
+      ${sc('#/manifestation', 'sparkles', 'Manifester', 'pink')}
+      ${sc('#/perso', 'heart', 'Perso', 'peach')}
+      ${sc('#/calendrier', 'calendar', 'Calendrier', 'lilac')}
+    </div>
+    <div class="card flush mt"><ul class="list">
+      <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="edit-profile"><div class="ico-box">${icon('user')}</div><div class="grow t">Mon profil</div><span style="color:var(--pink)">♥</span><span class="chev">${icon('right')}</span></button></li>
+      ${line('#/documents', 'file', 'Mes documents')}
+      ${line('#/reglages', 'settings', 'Paramètres', cloudStatus().email ? '<span class="badge good">☁️ synchro</span>' : '')}
+      <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="help"><div class="ico-box">${icon('help')}</div><div class="grow t">Aide & astuces</div><span class="chev">${icon('right')}</span></button></li>
+    </ul></div>
+  </section>`;
+}
+
+const CLOUD_LABELS = { off: '', 'signed-out': 'Non connectée', syncing: '🔄 Synchronisation…', pending: '⏳ Modifications en attente…', ok: '✅ Synchronisé', error: '⚠️ Erreur' };
+const cloudStatusText = (s = cloudStatus()) => [CLOUD_LABELS[s.state], s.message].filter(Boolean).join(' — ');
 
 function cloudCard() {
   const s = cloudStatus();
   const cfg = cloudConfig();
   let body;
   if (!s.configured || ui.editCloudConfig) {
-    body = `<p class="small muted">Pour retrouver tes données sur ton téléphone et ton ordinateur, crée un projet gratuit sur Supabase (le guide pas à pas est dans le fichier <strong>SUPABASE.md</strong> du projet), puis colle ici ses deux informations.</p>
+    body = `<p class="small muted">Pour retrouver tes données sur ton téléphone et ton ordinateur, crée un projet gratuit sur Supabase (guide pas à pas : fichier <strong>SUPABASE.md</strong>), puis colle ici ses deux informations.</p>
       <form class="stack" data-form="cloud-config">
-        <label class="field"><span class="small muted">Project URL</span><input class="input" name="url" value="${esc(cfg.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" /></label>
-        <label class="field"><span class="small muted">Clé publique (anon / publishable)</span><input class="input" name="anonKey" value="${esc(cfg.anonKey)}" placeholder="eyJhbGciOi… ou sb_publishable_…" autocomplete="off" /></label>
-        <div class="head-actions"><button class="btn primary small" type="submit">Enregistrer</button>${s.configured ? '<button class="btn small ghost" type="button" data-action="cloud-edit-cancel">Annuler</button>' : ''}</div>
+        <label class="field"><span>Project URL</span><input class="input" name="url" value="${esc(cfg.url)}" placeholder="https://xxxx.supabase.co" autocomplete="off" /></label>
+        <label class="field"><span>Clé publique (anon / publishable)</span><input class="input" name="anonKey" value="${esc(cfg.anonKey)}" placeholder="eyJhbGciOi… ou sb_publishable_…" autocomplete="off" /></label>
+        <div class="btn-row"><button class="btn pink sm" type="submit">Enregistrer</button>${s.configured ? '<button class="btn sm ghost" type="button" data-action="cloud-edit-cancel">Annuler</button>' : ''}</div>
       </form>`;
   } else if (!s.email) {
     body = `<p class="small muted">Connecte-toi avec le même compte sur chaque appareil. La première fois, choisis « Créer mon compte ».</p>
       <form class="stack" data-form="cloud-login">
         <input class="input" type="email" name="email" placeholder="Email" autocomplete="email" required />
         <input class="input" type="password" name="password" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password" required />
-        <div class="head-actions">
-          <button class="btn primary small" type="submit">Se connecter</button>
-          <button class="btn small" type="button" data-action="cloud-signup">Créer mon compte</button>
-          <button class="btn small ghost" type="button" data-action="cloud-edit">Configuration</button>
+        <div class="btn-row">
+          <button class="btn pink sm" type="submit">Se connecter</button>
+          <button class="btn sm" type="button" data-action="cloud-signup">Créer mon compte</button>
+          <button class="btn sm ghost" type="button" data-action="cloud-edit">Configuration</button>
         </div>
       </form>`;
   } else {
     body = `<p class="small">Connectée : <strong>${esc(s.email)}</strong></p>
-      <p class="small muted">Chaque modification est envoyée automatiquement. En cas de modifications sur deux appareils, c’est la plus récente qui l’emporte.</p>
-      <div class="head-actions">
-        <button class="btn small" data-action="cloud-sync">🔄 Synchroniser maintenant</button>
-        <button class="btn small ghost" data-action="cloud-signout">Se déconnecter</button>
-      </div>`;
+      <p class="small muted">Chaque modification est envoyée automatiquement. Si deux appareils sont modifiés, c’est la version la plus récente qui l’emporte.</p>
+      <div class="btn-row"><button class="btn sm soft" data-action="cloud-sync">🔄 Synchroniser maintenant</button><button class="btn sm ghost" data-action="cloud-signout">Se déconnecter</button></div>`;
   }
-  return `<div class="card stack">
-    <h3>☁️ Synchronisation</h3>
+  return `<div class="card stack" id="sync">
+    <h3 style="margin:0;font-family:var(--serif)">☁️ Synchronisation</h3>
     <div class="small" id="cloud-status">${esc(cloudStatusText(s))}</div>
     ${body}
   </div>`;
@@ -1487,34 +1718,78 @@ function cloudCard() {
 function viewSettings() {
   const theme = document.documentElement.dataset.theme || 'auto';
   return `
-  <header class="page-head"><div><h1>⚙️ Réglages</h1><div class="sub">${cloudStatus().email ? 'Tes données sont synchronisées entre tes appareils.' : 'Tes données restent sur cet appareil.'}</div></div></header>
-  <div class="grid grid-2">
-    <div class="card stack">
-      <h3>Profil</h3>
-      <form class="inline-add" data-form="set-name">
-        <input name="name" value="${esc(state.settings.name)}" placeholder="Prénom" />
-        <button class="btn small" type="submit">Enregistrer</button>
-      </form>
-      <h3 style="margin-top:18px">Apparence</h3>
-      <div class="chips">
-        ${[['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="chip ${theme === v ? 'active' : ''}" data-action="theme" data-theme="${v}">${l}</button>`).join('')}
-      </div>
-    </div>
-    <div class="card stack">
-      <h3>Sauvegarde</h3>
-      <p class="small muted">Les données sont enregistrées dans ce navigateur. Exporte-les régulièrement pour ne rien perdre, ou pour les transférer sur un autre appareil.</p>
-      <div class="head-actions">
-        <button class="btn" data-action="export">⬇️ Exporter (JSON)</button>
-        <label class="btn">⬆️ Importer<input type="file" accept="application/json,.json" data-action="import" hidden /></label>
-      </div>
-      <h3 style="margin-top:18px">Remise à zéro</h3>
-      <div class="head-actions">
-        <button class="btn danger" data-action="reset-empty">Tout effacer</button>
-        <button class="btn" data-action="reset-sample">Recharger l’exemple</button>
-      </div>
-    </div>
+  <header class="head">
+    <div class="head-row"><div><h1 class="title sparkle">Paramètres</h1><div class="subtitle">${cloudStatus().email ? 'Tes données sont synchronisées.' : 'Tes données restent sur cet appareil.'}</div></div>${backBtn('#/menu')}</div>
+  </header>
+  <section class="section stack">
     ${cloudCard()}
-  </div>`;
+    <div class="card stack">
+      <h3 style="margin:0;font-family:var(--serif)">Apparence</h3>
+      <div class="btn-row">${[['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="chip ${theme === v ? 'active' : ''}" data-action="theme" data-theme="${v}">${l}</button>`).join('')}</div>
+      <button class="btn sm" data-action="edit-profile">${icon('user')} Prénom, devise & photos</button>
+    </div>
+    <div class="card stack">
+      <h3 style="margin:0;font-family:var(--serif)">Sauvegarde</h3>
+      <p class="small muted" style="margin:0">Exporte tes données de temps en temps (fichier JSON), pour les garder en lieu sûr.</p>
+      <div class="btn-row">
+        <button class="btn sm" data-action="export">⬇️ Exporter</button>
+        <label class="btn sm">⬆️ Importer<input type="file" accept="application/json,.json" data-action="import" hidden /></label>
+      </div>
+    </div>
+    <div class="card stack">
+      <h3 style="margin:0;font-family:var(--serif)">Remise à zéro</h3>
+      <div class="btn-row"><button class="btn sm danger" data-action="reset-empty">Tout effacer</button><button class="btn sm" data-action="reset-sample">Recharger l’exemple</button><button class="btn sm ghost" data-action="show-splash">Revoir l’écran d’accueil</button></div>
+    </div>
+  </section>`;
+}
+
+/* ============================================================
+   Feuilles : ajout rapide, rappels, aide
+   ============================================================ */
+
+function fabSheet() {
+  const b = (action, ic, label, cls = '', extra = '') => `<button data-action="${action}" ${extra}><span class="ico-box ${cls}">${icon(ic)}</span>${label}</button>`;
+  openSheet(
+    'Ajouter ✦',
+    `<div class="sheet-grid">
+      ${b('add-item', 'check', 'Tâche', 'pink', `data-area="${ui.taskFilter === 'all' ? 'travail' : ui.taskFilter}"`)}
+      ${b('add-expense', 'bag', 'Dépense', 'bad')}
+      ${b('add-income-choice', 'euro', 'Revenu', 'good')}
+      ${b('add-bill', 'receipt', 'Charge', 'peach')}
+      ${b('add-goal', 'target', 'Objectif', 'lilac')}
+      ${b('add-trip', 'plane', 'Voyage', 'pink')}
+      ${b('add-routine', 'dumbbell', 'Routine', 'peach')}
+      ${b('gratitude', 'heart', 'Gratitude', 'pink')}
+      ${b('add-item', 'file', 'Document', 'lilac', 'data-area="quotidien" data-kind="renouvellement"')}
+    </div>`,
+  );
+}
+
+function alertsSheet() {
+  const { late, bills } = alerts();
+  const t = todayISO();
+  const today = state.items.filter((i) => !i.done && i.date === t);
+  openSheet(
+    'Rappels 🔔',
+    `${late.length ? `<div class="group-label bad">En retard</div><ul class="list">${late.map((i) => taskRow(i)).join('')}</ul>` : ''}
+     ${bills.length ? `<div class="group-label">Paiements à prévoir</div><ul class="list">${bills.map(({ bill, date }) => `<li class="row"><input type="checkbox" class="circle" data-action="pay-bill" data-id="${bill.id}" data-month="${date.slice(0, 7)}" aria-label="Payé" /><div class="grow"><div class="t">${esc(bill.label)}</div><div class="s">${esc(inDays(daysBetween(t, date)))}</div></div><div class="amt">${eur(bill.amount)}</div></li>`).join('')}</ul>` : ''}
+     ${today.length ? `<div class="group-label">Aujourd'hui</div><ul class="list">${today.map((i) => taskRow(i)).join('')}</ul>` : ''}
+     ${late.length || bills.length || today.length ? '' : emptyMsg('Aucun rappel. Tout roule 💅')}`,
+  );
+}
+
+function helpSheet() {
+  openSheet(
+    'Aide & astuces',
+    `<ul class="list small">
+      <li class="row"><div class="grow">✦ Le bouton <strong>+</strong> au centre ajoute n’importe quoi : tâche, dépense, objectif, voyage…</div></li>
+      <li class="row"><div class="grow">✦ Coche le rond à gauche pour terminer une tâche, marquer un loyer payé ou un salaire reçu.</div></li>
+      <li class="row"><div class="grow">✦ Touche une ligne pour la modifier ou la supprimer.</div></li>
+      <li class="row"><div class="grow">✦ Ajoute ta photo dans <strong>Mon profil</strong>, et une photo pour tes voyages et ton vision board.</div></li>
+      <li class="row"><div class="grow">✦ <strong>Paramètres → Synchronisation</strong> : retrouve tout sur ton téléphone et ton ordinateur.</div></li>
+      <li class="row"><div class="grow">✦ Sur iPhone : Safari → Partager → « Sur l’écran d’accueil » pour l’installer comme une app.</div></li>
+    </ul>`,
+  );
 }
 
 /* ============================================================
@@ -1522,25 +1797,39 @@ function viewSettings() {
    ============================================================ */
 
 const ROUTES = {
-  aujourdhui: viewToday,
+  accueil: viewHome,
+  taches: viewTasks,
+  calendrier: viewCalendar,
+  menu: viewMenu,
   argent: viewMoney,
-  travail: () => viewArea('travail'),
-  ecole: () => viewArea('ecole'),
+  carriere: viewCareer,
+  ecole: viewSchool,
   voyages: viewTrips,
-  quotidien: () => viewArea('quotidien'),
+  voyage: viewTrip,
+  objectifs: viewGoals,
   manifestation: viewManifest,
+  perso: viewPerso,
+  documents: viewDocuments,
   reglages: viewSettings,
 };
+const TAB_OF = { accueil: 'accueil', taches: 'taches', calendrier: 'calendrier' };
+// Anciennes adresses (version précédente de l'app).
+const ALIASES = { aujourdhui: 'accueil', travail: 'carriere', quotidien: 'perso' };
 
-function currentRoute() {
-  const r = location.hash.replace(/^#\/?/, '');
-  return ROUTES[r] ? r : 'aujourdhui';
+function parseRoute() {
+  const [name, arg] = location.hash.replace(/^#\/?/, '').split('/');
+  const r = ALIASES[name] || name;
+  return ROUTES[r] ? { name: r, arg } : { name: 'accueil' };
 }
 
 function render() {
-  const route = currentRoute();
-  $('#view').innerHTML = ROUTES[route]();
-  document.querySelectorAll('.nav a[data-route]').forEach((a) => a.classList.toggle('active', a.dataset.route === route));
+  const { name, arg } = parseRoute();
+  const splash = !state.settings.onboarded && name !== 'reglages';
+  const view = $('#view');
+  view.classList.toggle('bare', splash);
+  view.innerHTML = splash ? viewSplash() : ROUTES[name](arg);
+  $('#tabbar').hidden = splash;
+  document.querySelectorAll('.tabbar a[data-tab]').forEach((a) => a.classList.toggle('active', a.dataset.tab === (TAB_OF[name] || 'menu')));
 }
 
 /* ============================================================
@@ -1550,67 +1839,135 @@ function render() {
 const money = () => state.money;
 
 const actions = {
-  goto: (el) => { location.hash = el.dataset.href; },
-  'quick-add': () => {
+  goto: (el) => {
+    location.hash = el.dataset.href;
+  },
+  fab: () => fabSheet(),
+  alerts: () => alertsSheet(),
+  help: () => helpSheet(),
+  'close-sheet': () => closeDialog(),
+  start: () => {
     openForm({
-      title: 'Ajouter…',
-      fields: [{ name: 'area', label: 'Dans quel espace ?', type: 'select', options: Object.entries(AREAS).map(([k, v]) => [k, `${v.emoji} ${v.label}`]) }],
-      submitLabel: 'Continuer',
-      onSubmit: (d) => setTimeout(() => itemForm(d.area), 0),
+      title: 'Bienvenue ✦',
+      fields: [{ name: 'name', label: 'Comment tu t’appelles ?', required: true }],
+      values: { name: state.settings.name },
+      submitLabel: 'C’est parti 💖',
+      onSubmit: (d) => {
+        state.settings.name = d.name;
+        state.settings.onboarded = true;
+        location.hash = '#/accueil';
+        commit(`Bienvenue ${d.name} ✨`);
+      },
     });
   },
-  'quick-expense': () => expenseForm(),
-  'add-item': (el) => itemForm(el.dataset.area, null, el.dataset.kind || undefined),
+  'start-login': () => {
+    state.settings.onboarded = true;
+    save();
+    location.hash = '#/reglages';
+    render();
+  },
+  'show-splash': () => {
+    state.settings.onboarded = false;
+    save();
+    location.hash = '#/accueil';
+    render();
+  },
+
+  // Tâches
+  'add-item': (el) => {
+    closeDialog();
+    itemForm(null, { area: el.dataset.area || 'travail', kind: el.dataset.kind || 'tache', date: el.dataset.date });
+  },
   'edit-item': (el) => {
     const i = findById(state.items, el.dataset.id);
-    if (i) itemForm(i.area, i);
+    if (i) itemForm(i);
   },
   'toggle-item': (el) => {
     const i = findById(state.items, el.dataset.id);
     if (!i) return;
     i.done = !i.done;
-    commit(i.done ? 'Bravo, c’est fait ✓' : null);
+    commit(i.done ? 'Bravo, c’est fait ✦' : null);
   },
-  filter: (el) => {
-    ui.filters[el.dataset.area] = el.dataset.kind;
+  'task-filter': (el) => {
+    ui.taskFilter = el.dataset.filter;
     render();
   },
-  'toggle-show-done': (el) => {
-    ui.showDone[el.dataset.area] = !ui.showDone[el.dataset.area];
+  'area-filter': (el) => {
+    ui.areaFilter[el.dataset.area] = el.dataset.kind;
+    render();
+    if (el.dataset.scroll) document.getElementById(el.dataset.scroll)?.scrollIntoView({ behavior: 'smooth' });
+  },
+  'toggle-show-done': () => {
+    ui.showDone = !ui.showDone;
     render();
   },
-  'clear-done': (el) => {
-    if (!confirm('Supprimer définitivement les éléments terminés de cet espace ?')) return;
-    state.items = state.items.filter((i) => !(i.area === el.dataset.area && i.done));
-    commit('Éléments terminés supprimés');
+  'clear-done': () => {
+    if (!confirm('Supprimer définitivement les tâches terminées affichées ?')) return;
+    state.items = state.items.filter((i) => !(i.done && (ui.taskFilter === 'all' || i.area === ui.taskFilter)));
+    commit('Tâches terminées supprimées');
   },
   'toggle-routine': (el) => {
     const r = findById(state.routines, el.dataset.id);
     if (!r) return;
-    const t = todayISO();
-    if (r.log[t]) delete r.log[t];
-    else r.log[t] = true;
-    commit(r.log[t] ? `${r.emoji} ${r.label} ✓` : null);
+    const d = el.dataset.date || todayISO();
+    if (r.log[d]) delete r.log[d];
+    else r.log[d] = true;
+    commit(r.log[d] ? `${r.emoji} ${r.label} ✓` : null);
   },
-  'add-routine': () => routineForm(),
+  'add-routine': () => {
+    closeDialog();
+    routineForm();
+  },
   'edit-routine': (el) => routineForm(findById(state.routines, el.dataset.id)),
 
+  // Calendrier
+  'cal-month': (el) => {
+    ui.calMonth = shiftMonth(ui.calMonth, Number(el.dataset.step));
+    render();
+  },
+  'cal-day': (el) => {
+    ui.calDay = el.dataset.date;
+    if (!ui.calDay.startsWith(ui.calMonth)) ui.calMonth = ui.calDay.slice(0, 7);
+    render();
+  },
+
   // Argent
-  'add-expense': () => expenseForm(),
+  'toggle-balance': () => {
+    state.settings.hideBalance = !state.settings.hideBalance;
+    commit();
+  },
+  'budget-detail': () => budgetDetail(),
+  'add-expense': () => {
+    closeDialog();
+    expenseForm();
+  },
   'edit-expense': (el) => expenseForm(findById(money().expenses, el.dataset.id)),
-  'add-bill': (el) => billForm(null, el.dataset.category),
+  'add-bill': (el) => {
+    closeDialog();
+    billForm(null, el.dataset.category);
+  },
   'edit-bill': (el) => billForm(findById(money().bills, el.dataset.id)),
   'toggle-bill': (el) => {
     const b = findById(money().bills, el.dataset.id);
     const m = monthKey();
-    b.paid = b.paid.includes(m) ? b.paid.filter((x) => x !== m) : [...b.paid, m];
-    commit();
+    const had = b.paid.includes(m);
+    b.paid = had ? b.paid.filter((x) => x !== m) : [...b.paid, m];
+    commit(had ? null : `${b.label} payé ✓`);
   },
   'pay-bill': (el) => {
     const b = findById(money().bills, el.dataset.id);
-    const m = el.dataset.month;
-    if (!b.paid.includes(m)) b.paid.push(m);
+    if (!b.paid.includes(el.dataset.month)) b.paid.push(el.dataset.month);
     commit(`${b.label} payé ✓`);
+    alertsSheet();
+  },
+  'add-income-choice': () => {
+    openSheet(
+      'Ajouter un revenu',
+      `<div class="sheet-grid" style="grid-template-columns:1fr 1fr">
+        <button data-action="add-income"><span class="ico-box good">${icon('euro')}</span>Régulier<br><span class="muted small">salaire, CAF…</span></button>
+        <button data-action="add-extra"><span class="ico-box pink">${icon('sparkles')}</span>Exceptionnel<br><span class="muted small">prime, 13e mois…</span></button>
+      </div>`,
+    );
   },
   'add-income': () => recurringIncomeForm(),
   'edit-income': (el) => recurringIncomeForm(findById(money().recurringIncomes, el.dataset.id)),
@@ -1619,7 +1976,7 @@ const actions = {
     const m = monthKey();
     const had = inc.received.includes(m);
     inc.received = had ? inc.received.filter((x) => x !== m) : [...inc.received, m];
-    commit(had ? null : `${inc.label} reçu 💶`);
+    commit(had ? null : `${inc.label} reçu 💸`);
   },
   'add-extra': () => extraIncomeForm(),
   'edit-extra': (el) => extraIncomeForm(findById(money().extraIncomes, el.dataset.id)),
@@ -1627,7 +1984,7 @@ const actions = {
     const x = findById(money().extraIncomes, el.dataset.id);
     x.received = !x.received;
     if (x.received && x.date > todayISO()) x.date = todayISO();
-    commit(x.received ? `+${eur(x.amount)} 💶` : null);
+    commit(x.received ? `+ ${eur(x.amount)} 💸` : null);
   },
   'add-debt': () => debtForm(),
   'edit-debt': (el) => debtForm(findById(money().debts, el.dataset.id)),
@@ -1653,24 +2010,37 @@ const actions = {
     const m = monthKey();
     openForm({
       title: 'Solde au début du mois',
-      fields: [{ name: 'carry', label: 'Ce que tu avais sur ton compte le 1er (salaire du mois dernier compris)', type: 'number' }],
+      fields: [{ name: 'carry', label: 'Ce que tu avais le 1er (salaire du mois dernier compris)', type: 'number' }],
       values: { carry: money().carry[m] || 0 },
       onSubmit: (d) => {
         money().carry[m] = d.carry;
-        commit('Solde de départ mis à jour ✓');
+        commit('Solde mis à jour ✓');
       },
     });
   },
 
-  // Voyages
-  'add-trip': () => tripForm(),
-  'edit-trip': (el) => tripForm(findById(state.trips, el.dataset.id)),
-  'toggle-trip': (el) => {
-    const id = el.dataset.id;
-    if (ui.openTrips.has(id)) ui.openTrips.delete(id);
-    else ui.openTrips.add(id);
+  // Carrière, école, objectifs
+  'add-goal': (el) => {
+    closeDialog();
+    goalForm(null, el.dataset.category);
+  },
+  'edit-goal': (el) => {
+    const g = findById(state.manifest.dreams, el.dataset.id);
+    if (g) goalForm(g);
+    else goalForm(null, el.dataset.category);
+  },
+  'goal-filter': (el) => {
+    ui.goalFilter = el.dataset.filter;
     render();
   },
+  'edit-school': () => schoolForm(),
+
+  // Voyages
+  'add-trip': () => {
+    closeDialog();
+    tripForm();
+  },
+  'edit-trip': (el) => tripForm(findById(state.trips, el.dataset.id)),
   'add-booking': (el) => bookingForm(findById(state.trips, el.dataset.trip)),
   'edit-booking': (el) => {
     const tr = findById(state.trips, el.dataset.trip);
@@ -1689,8 +2059,10 @@ const actions = {
   },
 
   // Manifestation
-  'add-dream': () => dreamForm(),
-  'edit-dream': (el) => dreamForm(findById(state.manifest.dreams, el.dataset.id)),
+  gratitude: () => {
+    closeDialog();
+    gratitudeForm();
+  },
   'next-affirmation': () => {
     ui.affShift++;
     render();
@@ -1698,6 +2070,39 @@ const actions = {
   'del-affirmation': (el) => {
     state.manifest.affirmations = state.manifest.affirmations.filter((a) => a.id !== el.dataset.id);
     commit();
+  },
+
+  // Profil & réglages
+  'edit-profile': () => profileForm(),
+  theme: (el) => {
+    try {
+      if (el.dataset.theme === 'auto') localStorage.removeItem(`${STORAGE_KEY}:theme`);
+      else localStorage.setItem(`${STORAGE_KEY}:theme`, el.dataset.theme);
+    } catch {}
+    applyTheme();
+    render();
+  },
+  export: () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `marie-dashboard-${todayISO()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('Sauvegarde téléchargée ✓');
+  },
+  'reset-empty': () => {
+    if (!confirm('Effacer toutes les données ? Pense à exporter avant.')) return;
+    const { name, photo, cover, tagline } = state.settings;
+    state = emptyState();
+    Object.assign(state.settings, { name, photo, cover, tagline, onboarded: true });
+    commit('Page blanche ✨');
+  },
+  'reset-sample': () => {
+    if (!confirm('Remplacer tes données par l’exemple ?')) return;
+    state = sampleState();
+    state.settings.onboarded = true;
+    commit('Exemple rechargé');
   },
 
   // Synchronisation
@@ -1717,9 +2122,11 @@ const actions = {
     el.disabled = true;
     try {
       const result = await signUp(email, password);
+      state.settings.onboarded = true;
+      save();
       if (result === 'ok') render();
       else el.disabled = false;
-      toast(result === 'confirm' ? '📧 Confirme ton email, puis connecte-toi' : 'Compte créé, synchronisation activée ☁️');
+      toast(result === 'confirm' ? '📧 Confirme ton email, puis connecte-toi' : 'Compte créé, synchro activée ☁️');
     } catch (e) {
       el.disabled = false;
       toast(`⚠️ ${e.message}`);
@@ -1735,38 +2142,6 @@ const actions = {
     await signOut();
     render();
   },
-
-  // Réglages
-  theme: (el) => {
-    const v = el.dataset.theme;
-    try {
-      if (v === 'auto') localStorage.removeItem(`${STORAGE_KEY}:theme`);
-      else localStorage.setItem(`${STORAGE_KEY}:theme`, v);
-    } catch {}
-    applyTheme();
-    render();
-  },
-  export: () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `marie-dashboard-${todayISO()}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    toast('Sauvegarde téléchargée ✓');
-  },
-  'reset-empty': () => {
-    if (!confirm('Effacer toutes les données ? Pense à exporter avant.')) return;
-    const name = state.settings.name;
-    state = emptyState();
-    state.settings.name = name;
-    commit('Tout est effacé — page blanche ✨');
-  },
-  'reset-sample': () => {
-    if (!confirm('Remplacer tes données par l’exemple ?')) return;
-    state = sampleState();
-    commit('Exemple rechargé');
-  },
 };
 
 document.addEventListener('click', (e) => {
@@ -1778,7 +2153,7 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.dream[data-action]')) {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role="button"][data-action]')) {
     e.preventDefault();
     actions[e.target.dataset.action]?.(e.target, e);
   }
@@ -1794,6 +2169,7 @@ document.addEventListener('change', (e) => {
       if (!data || typeof data !== 'object' || !data.money) throw new Error('format');
       if (!confirm('Remplacer les données actuelles par ce fichier ?')) return;
       state = normalize(data);
+      state.settings.onboarded = true;
       commit('Données importées ✓');
     } catch {
       toast('⚠️ Fichier invalide');
@@ -1807,35 +2183,38 @@ document.addEventListener('submit', (e) => {
   const form = e.target.closest('form[data-form]');
   if (!form) return;
   e.preventDefault();
-  if (form.dataset.form === 'add-check') {
+  const kind = form.dataset.form;
+  if (kind === 'add-check') {
     const text = form.elements.text.value.trim();
     if (!text) return;
     const tr = findById(state.trips, form.dataset.trip);
     tr.checklist.push({ id: uid(), text, done: false });
     commit();
-    $(`form[data-form="add-check"][data-trip="${tr.id}"] input`)?.focus();
-  } else if (form.dataset.form === 'gratitude') {
+    $('form[data-form="add-check"] input')?.focus();
+  } else if (kind === 'gratitude') {
     const entries = [0, 1, 2].map((i) => form.elements[`g${i}`].value.trim());
     state.manifest.gratitude[todayISO()] = entries;
     commit(entries.some(Boolean) ? 'Merci, merci, merci 🙏✨' : null);
-  } else if (form.dataset.form === 'add-affirmation') {
+  } else if (kind === 'add-affirmation') {
     const text = form.elements.text.value.trim();
     if (!text) return;
     state.manifest.affirmations.push({ id: uid(), text });
     commit('Affirmation ajoutée 💕');
     $('form[data-form="add-affirmation"] input')?.focus();
-  } else if (form.dataset.form === 'cloud-config') {
+  } else if (kind === 'cloud-config') {
     const url = form.elements.url.value.trim();
     if (url && !/^https:\/\/.+/.test(url)) return toast('L’adresse doit commencer par https://');
     saveConfig(url, form.elements.anonKey.value);
     ui.editCloudConfig = false;
     render();
     toast('Configuration enregistrée ✓');
-  } else if (form.dataset.form === 'cloud-login') {
+  } else if (kind === 'cloud-login') {
     const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
     signIn(form.elements.email.value.trim(), form.elements.password.value)
       .then(() => {
+        state.settings.onboarded = true;
+        save();
         render();
         toast('Connectée ☁️');
       })
@@ -1843,9 +2222,6 @@ document.addEventListener('submit', (e) => {
         button.disabled = false;
         toast(`⚠️ ${err.message}`);
       });
-  } else if (form.dataset.form === 'set-name') {
-    state.settings.name = form.elements.name.value.trim() || 'Marie';
-    commit('Profil mis à jour ✓');
   }
 });
 
@@ -1859,15 +2235,17 @@ function applyTheme() {
 }
 
 window.addEventListener('hashchange', () => {
+  closeDialog();
   render();
   window.scrollTo(0, 0);
 });
 
-// Rafraîchit la vue au changement de jour si l'app reste ouverte.
 let lastDay = todayISO();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && todayISO() !== lastDay) {
     lastDay = todayISO();
+    ui.calDay = lastDay;
+    ui.calMonth = monthKey();
     render();
   }
 });
@@ -1879,6 +2257,7 @@ initCloud({
   getState: () => state,
   replaceState: (data) => {
     state = normalize(data);
+    state.settings.onboarded = true;
     save();
     render();
   },

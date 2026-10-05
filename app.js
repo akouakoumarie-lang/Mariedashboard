@@ -2,7 +2,8 @@
 // Application personnelle : les données sont stockées dans le navigateur
 // (localStorage) et peuvent être synchronisées via Supabase (cloud.js).
 
-import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig } from './cloud.js';
+import { initCloud, cloudStatus, cloudConfig, schedulePush, sync, signIn, signUp, signOut, saveConfig, sendTestPush } from './cloud.js';
+import { pushSupport, registerSW, currentSubscription, enablePush, disablePush, generateKeys } from './push.js';
 
 const STORAGE_KEY = 'marie-dashboard:v1';
 
@@ -181,6 +182,7 @@ function emptyState() {
       onboarded: false,
       hideBalance: false,
       school: { program: '', school: '', start: '', end: '' },
+      push: { publicKey: '', prefs: { morning: '08:00', reminders: true, before: 15 } },
     },
     items: [],
     routines: [],
@@ -288,6 +290,8 @@ function normalize(data) {
   const out = { ...base, ...data };
   out.settings = { ...base.settings, ...(data.settings || {}) };
   out.settings.school = { ...base.settings.school, ...(data.settings?.school || {}) };
+  out.settings.push = { ...base.settings.push, ...(data.settings?.push || {}) };
+  out.settings.push.prefs = { ...base.settings.push.prefs, ...(data.settings?.push?.prefs || {}) };
   out.money = { ...base.money, ...(data.money || {}) };
   out.manifest = { ...base.manifest, ...(data.manifest || {}) };
   for (const k of ['items', 'routines', 'trips']) if (!Array.isArray(out[k])) out[k] = [];
@@ -323,6 +327,7 @@ const ui = {
   calDay: todayISO(),
   affShift: 0,
   editCloudConfig: false,
+  pushDevice: 'unknown',
 };
 
 function save() {
@@ -1715,6 +1720,101 @@ function cloudCard() {
   </div>`;
 }
 
+function notifCard() {
+  const s = cloudStatus();
+  const sup = pushSupport();
+  const push = state.settings.push;
+  const p = push.prefs;
+  let body;
+  if (!sup.supported) {
+    body = sup.ios && !sup.standalone
+      ? `<p class="small">Sur iPhone, les notifications marchent uniquement quand l’app est <strong>installée sur l’écran d’accueil</strong> (iOS 16.4 ou plus récent) :</p>
+         <p class="small muted">Safari → bouton Partager → « Sur l’écran d’accueil », puis ouvre Marie Dashboard depuis son icône et reviens ici.</p>`
+      : '<p class="small muted">Ce navigateur ne gère pas les notifications push. Essaie Chrome, Edge, Firefox ou Safari (iPhone : app installée sur l’écran d’accueil).</p>';
+  } else if (!s.email) {
+    body = '<p class="small muted">Active d’abord la <strong>synchronisation</strong> ci-dessus : c’est elle qui permet de t’envoyer tes rappels même quand l’app est fermée.</p>';
+  } else if (!push.publicKey) {
+    body = `<p class="small muted">Reçois chaque matin le résumé de ta journée, et un rappel avant chaque tâche ou séance qui a une heure — même app fermée. Première étape (une seule fois) : créer tes clés de notification.</p>
+      <button class="btn pink sm" data-action="push-generate">✦ Générer mes clés</button>`;
+  } else {
+    const dev = {
+      unknown: '…',
+      on: '<span class="badge good">Activées sur cet appareil ✓</span>',
+      off: '<button class="btn pink sm" data-action="push-enable">🔔 Activer sur cet appareil</button>',
+      denied: '<span class="badge bad">Bloquées</span> <span class="small muted">Autorise les notifications pour Marie Dashboard dans les réglages du téléphone / du navigateur.</span>',
+    }[ui.pushDevice];
+    body = `<div id="push-device" class="btn-row" style="align-items:center">${dev}</div>
+      <form class="stack" data-form="push-prefs">
+        <label class="field"><span>Résumé du matin à</span><input class="input" type="time" name="morning" value="${esc(p.morning)}" /></label>
+        <label class="field field-check"><input type="checkbox" class="circle" name="reminders" ${p.reminders ? 'checked' : ''} /> Rappel avant les tâches et routines qui ont une heure</label>
+        <label class="field"><span>Me prévenir</span><select class="input" name="before">${[[0, 'à l’heure pile'], [5, '5 min avant'], [15, '15 min avant'], [30, '30 min avant'], [60, '1 h avant']].map(([v, l]) => `<option value="${v}" ${Number(p.before) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <div class="btn-row"><button class="btn sm soft" type="submit">Enregistrer</button></div>
+      </form>
+      <div class="btn-row">
+        <button class="btn sm" data-action="push-test">Envoyer un test</button>
+        ${ui.pushDevice === 'on' ? '<button class="btn sm ghost" data-action="push-disable">Désactiver ici</button>' : ''}
+        <button class="btn sm ghost" data-action="push-generate">Refaire la configuration</button>
+      </div>`;
+  }
+  return `<div class="card stack" id="notifications">
+    <h3 style="margin:0;font-family:var(--serif)">🔔 Notifications</h3>
+    ${body}
+  </div>`;
+}
+
+async function refreshPushDevice() {
+  const sup = pushSupport();
+  if (!sup.supported || !state.settings.push.publicKey) return;
+  let next = 'off';
+  if (sup.permission === 'denied') next = 'denied';
+  else if (sup.permission === 'granted' && (await currentSubscription())) next = 'on';
+  if (next !== ui.pushDevice) {
+    ui.pushDevice = next;
+    if (parseRoute().name === 'reglages') render();
+  }
+}
+
+function copyField(label, value, secret = false) {
+  return `<div class="field"><span>${esc(label)}${secret ? ' 🔒' : ''}</span>
+    <div class="inline-add" style="margin:0"><input class="input" readonly value="${esc(value)}" onclick="this.select()" /><button class="btn sm soft" type="button" data-action="copy" data-value="${esc(value)}">Copier</button></div></div>`;
+}
+
+function pushSetupSheet(keys) {
+  const { url } = cloudConfig();
+  const cron = `create extension if not exists pg_cron;
+create extension if not exists pg_net;
+select cron.schedule('marie-notify', '*/5 * * * *', $$
+  select net.http_post(
+    url := '${url}/functions/v1/notify',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ${keys.cronSecret}'),
+    body := '{}'::jsonb
+  );
+$$);
+select cron.schedule('marie-notify-cleanup', '0 4 * * *', $$
+  delete from public.notifications_sent where sent_at < now() - interval '3 days';
+$$);`;
+  openSheet(
+    '🔔 Configurer les notifications',
+    `<p class="small"><strong>Copie ces valeurs maintenant</strong> : la clé privée n’est affichée qu’une fois (elle n’est pas enregistrée dans l’app). Le détail est dans <strong>NOTIFICATIONS.md</strong>.</p>
+    <div class="group-label">1 · Supabase → SQL Editor</div>
+    <p class="small muted" style="margin:0">Exécute le fichier <strong>supabase/notifications.sql</strong> (crée les tables).</p>
+    <div class="group-label">2 · Edge Functions → Deploy a new function → Via Editor</div>
+    <p class="small muted" style="margin:0">Nom : <strong>notify</strong>. Colle le contenu de <strong>supabase/functions/notify/index.ts</strong>, puis Deploy. Dans les réglages de la fonction, <strong>désactive « Verify JWT »</strong>.</p>
+    <div class="group-label">3 · Edge Functions → Secrets (4 secrets)</div>
+    ${copyField('VAPID_PUBLIC_KEY', keys.publicKey)}
+    ${copyField('VAPID_PRIVATE_KEY', keys.privateKey, true)}
+    ${copyField('VAPID_SUBJECT', 'mailto:ton-email@exemple.com')}
+    ${copyField('CRON_SECRET', keys.cronSecret, true)}
+    <p class="small muted" style="margin:0">Pour VAPID_SUBJECT, remplace par ton adresse email (garde « mailto: »).</p>
+    <div class="group-label">4 · SQL Editor → nouveau script (planificateur)</div>
+    <textarea class="input" readonly rows="7" style="font-family:monospace;font-size:11px" onclick="this.select()">${esc(cron)}</textarea>
+    <button class="btn sm soft" data-action="copy" data-value="${esc(cron)}">Copier le script</button>
+    <div class="group-label">5 · Ici, sur chaque téléphone</div>
+    <p class="small muted" style="margin:0">« Activer sur cet appareil », puis « Envoyer un test ».</p>
+    <button class="btn pink block" data-action="close-sheet">C’est noté ✦</button>`,
+  );
+}
+
 function viewSettings() {
   const theme = document.documentElement.dataset.theme || 'auto';
   return `
@@ -1723,6 +1823,7 @@ function viewSettings() {
   </header>
   <section class="section stack">
     ${cloudCard()}
+    ${notifCard()}
     <div class="card stack">
       <h3 style="margin:0;font-family:var(--serif)">Apparence</h3>
       <div class="btn-row">${[['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(([v, l]) => `<button class="chip ${theme === v ? 'active' : ''}" data-action="theme" data-theme="${v}">${l}</button>`).join('')}</div>
@@ -1830,6 +1931,7 @@ function render() {
   view.innerHTML = splash ? viewSplash() : ROUTES[name](arg);
   $('#tabbar').hidden = splash;
   document.querySelectorAll('.tabbar a[data-tab]').forEach((a) => a.classList.toggle('active', a.dataset.tab === (TAB_OF[name] || 'menu')));
+  if (name === 'reglages' && ui.pushDevice === 'unknown') refreshPushDevice();
 }
 
 /* ============================================================
@@ -2105,6 +2207,55 @@ const actions = {
     commit('Exemple rechargé');
   },
 
+  // Notifications
+  'push-generate': async () => {
+    if (state.settings.push.publicKey && !confirm('Créer de nouvelles clés ? Il faudra remplacer les secrets dans Supabase et réactiver chaque appareil.')) return;
+    const keys = await generateKeys();
+    state.settings.push.publicKey = keys.publicKey;
+    ui.pushDevice = 'off';
+    await disablePush().catch(() => {});
+    commit();
+    pushSetupSheet(keys);
+  },
+  'push-enable': async (el) => {
+    el.disabled = true;
+    try {
+      await enablePush(state.settings.push.publicKey);
+      ui.pushDevice = 'on';
+      render();
+      toast('Notifications activées 🔔✨');
+    } catch (e) {
+      el.disabled = false;
+      toast(`⚠️ ${e.message}`);
+      refreshPushDevice();
+    }
+  },
+  'push-disable': async () => {
+    await disablePush();
+    ui.pushDevice = 'off';
+    render();
+    toast('Notifications désactivées sur cet appareil');
+  },
+  'push-test': async (el) => {
+    el.disabled = true;
+    try {
+      const r = await sendTestPush();
+      if (r?.sent) toast(`Test envoyé à ${r.sent} appareil${r.sent > 1 ? 's' : ''} 🔔`);
+      else toast(`⚠️ ${r?.errors?.[0] || r?.info || 'Aucun appareil activé'}`);
+    } catch (e) {
+      toast(`⚠️ ${e.message}`);
+    }
+    el.disabled = false;
+  },
+  copy: async (el) => {
+    try {
+      await navigator.clipboard.writeText(el.dataset.value);
+      toast('Copié ✓');
+    } catch {
+      toast('Sélectionne le texte et copie-le');
+    }
+  },
+
   // Synchronisation
   'cloud-edit': () => {
     ui.editCloudConfig = true;
@@ -2201,6 +2352,13 @@ document.addEventListener('submit', (e) => {
     state.manifest.affirmations.push({ id: uid(), text });
     commit('Affirmation ajoutée 💕');
     $('form[data-form="add-affirmation"] input')?.focus();
+  } else if (kind === 'push-prefs') {
+    state.settings.push.prefs = {
+      morning: form.elements.morning.value,
+      reminders: form.elements.reminders.checked,
+      before: Number(form.elements.before.value),
+    };
+    commit('Préférences enregistrées 🔔');
   } else if (kind === 'cloud-config') {
     const url = form.elements.url.value.trim();
     if (url && !/^https:\/\/.+/.test(url)) return toast('L’adresse doit commencer par https://');
@@ -2253,6 +2411,7 @@ document.addEventListener('visibilitychange', () => {
 applyTheme();
 save();
 render();
+if (pushSupport().supported) registerSW();
 initCloud({
   getState: () => state,
   replaceState: (data) => {

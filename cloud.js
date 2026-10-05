@@ -237,3 +237,36 @@ export function initCloud(h) {
   else if (!session()) setStatus('signed-out');
   else sync();
 }
+
+/* ---------- Notifications push ---------- */
+
+function explainPush(e, what) {
+  const code = String(e.code || '').toUpperCase();
+  if (what === 'function' && e.status === 404) return 'La fonction « notify » n’est pas encore déployée dans Supabase.';
+  if (what === 'table' && (code === 'PGRST205' || code === '42P01' || /push_subscriptions/.test(e.message || ''))) return 'Les tables de notifications n’existent pas : exécute supabase/notifications.sql.';
+  return explain(e);
+}
+
+async function pushCall(fn, what) {
+  if (!isConfigured() || !session()) throw new Error('Active d’abord la synchronisation.');
+  try {
+    return await fn();
+  } catch (e) {
+    throw new Error(explainPush(e, what));
+  }
+}
+
+export const savePushSubscription = (subscription, timezone, device) =>
+  pushCall(() =>
+    authed('/rest/v1/push_subscriptions', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: { endpoint: subscription.endpoint, user_id: session().user.id, subscription, timezone, device },
+    }),
+    'table',
+  );
+
+export const removePushSubscription = (endpoint) =>
+  pushCall(() => authed(`/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`, { method: 'DELETE' }), 'table');
+
+export const sendTestPush = () => pushCall(() => authed('/functions/v1/notify', { method: 'POST', body: { test: true } }), 'function');

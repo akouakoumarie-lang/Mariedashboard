@@ -42,6 +42,7 @@ L'adresse est publique mais **les données ne le sont pas** : elles restent dans
 - **Synchronisation téléphone ↔ ordinateur (facultative)** : avec un compte Supabase gratuit. Le guide pas à pas est dans [SUPABASE.md](SUPABASE.md). Sans synchronisation, rien n'est envoyé sur internet.
 - Au premier lancement, des **données d'exemple** sont chargées. Dans *Réglages*, « Tout effacer » permet de repartir de zéro.
 - Sauvegarde manuelle : *Réglages → Exporter / Importer* (fichier JSON).
+- **Notifications sur le téléphone** (résumé du matin, rappels avant les tâches et le sport) : guide dans [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
 ## Calcul du budget restant
 

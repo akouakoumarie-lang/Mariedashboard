@@ -135,6 +135,12 @@ export function planNotifications(data: any, timeZone: string, now: Date): Push[
     if (rosary.daily && rosary.time && !rosary.log?.[date] && inWindow(rosary.time)) {
       out.push({ key: `rosary:${date}`, title: '📿 L’heure du chapelet', body: 'Un moment de paix avec Marie ✨', url: './#/chapelet' });
     }
+    const toeic = data?.toeic || {};
+    const goal = Number(toeic.dailyGoal) || 15;
+    if (toeic.reminder?.daily && toeic.reminder.time && (toeic.log?.[date]?.q || 0) < goal && inWindow(toeic.reminder.time)) {
+      const left = toeic.examDate && toeic.examDate >= date ? daysBetween(date, toeic.examDate) : null;
+      out.push({ key: `toeic:${date}`, title: `🎧 TOEIC${left !== null ? ` · J-${left}` : ''}`, body: 'Tes cartes et ta séance du jour t’attendent ✦', url: './#/toeic' });
+    }
   }
   return out;
 }

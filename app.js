@@ -7,6 +7,7 @@ import { pushSupport, registerSW, currentSubscription, enablePush, disablePush, 
 import { PRAYERS, MYSTERIES, MYSTERY_OF_DAY, rosarySteps, NOVENA_TEMPLATES } from './prayer-data.js';
 import { mountMap, unmountMap, geocode, reverseGeocode, flagOf } from './map.js';
 import { RECIPE_CATEGORIES, RECIPE_TAGS, MEALS, SAMPLE_RECIPES } from './recipes-data.js';
+import { TOEIC_PARTS, TOEIC_LEVELS, VOCAB_THEMES, VOCAB, GRAMMAR, QUESTIONS } from './toeic-data.js';
 
 const STORAGE_KEY = 'marie-dashboard:v1';
 
@@ -209,6 +210,19 @@ function emptyState() {
     },
     recipes: [],
     mealPlan: {},
+    toeic: {
+      target: 785,
+      examDate: '',
+      dailyGoal: 15,
+      reminder: { daily: false, time: '19:00' },
+      cards: {},
+      myWords: [],
+      stats: {},
+      errors: [],
+      recent: { L: [], R: [] },
+      log: {},
+      tests: [],
+    },
   };
 }
 
@@ -345,6 +359,9 @@ function normalize(data) {
   out.prayer = { ...base.prayer, ...(data.prayer || {}) };
   out.prayer.rosary = { ...base.prayer.rosary, ...(data.prayer?.rosary || {}) };
   out.inspirations = { ...base.inspirations, ...(data.inspirations || {}) };
+  out.toeic = { ...base.toeic, ...(data.toeic || {}) };
+  out.toeic.reminder = { ...base.toeic.reminder, ...(data.toeic?.reminder || {}) };
+  out.toeic.recent = { ...base.toeic.recent, ...(data.toeic?.recent || {}) };
   out.manifest.dreams = out.manifest.dreams.map((d) => ({ progress: d.manifested ? 100 : 0, ...d, category: LEGACY_DREAM_CATEGORY[d.category] || d.category || 'moi' }));
   return out;
 }
@@ -384,6 +401,11 @@ const ui = {
   mapView: null,
   pickTrip: null,
   showPrayerText: true,
+  quiz: null,
+  cards: null,
+  cardDir: 'en',
+  vocabTheme: 'all',
+  ttsSlow: false,
 };
 
 function save() {
@@ -1192,6 +1214,16 @@ function viewHome() {
       <div class="grow tap" data-action="goto" data-href="#/priere"><div class="t">${esc(n.name)}</div><div class="s">Jour ${day}/${n.days}${n.time ? ` · ${esc(fmtTime(n.time))}` : ''}</div></div>
       <input type="checkbox" class="circle" data-action="novena-day" data-id="${n.id}" data-day="${day}" ${done ? 'checked' : ''} aria-label="Prié" /></li>`);
   }
+  const T = state.toeic;
+  if (T.examDate >= t || T.reminder.daily || Object.keys(T.log).length) {
+    const left = T.examDate >= t ? daysBetween(t, T.examDate) : null;
+    const q = T.log[t]?.q || 0;
+    const cards = cardsToReview().total;
+    rows.push(`<li class="row tap ${q >= T.dailyGoal && !cards ? 'done' : ''}" data-action="goto" data-href="#/toeic">
+      <div class="ico-box lilac">🎧</div>
+      <div class="grow"><div class="t">TOEIC${left !== null ? ` · J-${left}` : ''}</div><div class="s">${Math.min(q, T.dailyGoal)}/${T.dailyGoal} questions${cards ? ` · ${plural(cards, 'carte')} à réviser` : ''}</div></div>
+      ${q >= T.dailyGoal && !cards ? '<span class="badge good">✓</span>' : `<span class="chev">${icon('right')}</span>`}</li>`);
+  }
   if (!grat) {
     rows.push(`<li class="row tap" data-action="gratitude">
       <div class="ico-box pink">${icon('heart')}</div>
@@ -1305,6 +1337,7 @@ function eventsOn(date) {
     if (tr.start === date) ev.push({ time: '', title: `Départ ${tr.destination} ${tr.emoji || ''}`, sub: 'Voyage', action: `data-action="goto" data-href="#/voyage/${tr.id}"`, dot: 'lilac' });
     if (tr.end === date && tr.end !== tr.start) ev.push({ time: '', title: `Retour de ${tr.destination}`, sub: 'Voyage', action: `data-action="goto" data-href="#/voyage/${tr.id}"`, dot: 'lilac' });
   }
+  if (state.toeic.examDate === date) ev.push({ time: '', title: 'Examen TOEIC 🎯', sub: 'TOEIC', action: 'data-action="goto" data-href="#/toeic"', dot: 'lilac' });
   return ev.sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
 }
 
@@ -1925,6 +1958,716 @@ function viewRosary() {
   </section>`;
 }
 
+
+/* ============================================================
+   TOEIC
+   ============================================================ */
+
+// Répétition espacée : jours avant la prochaine révision selon la boîte (0 à 5).
+const SRS_DAYS = [0, 1, 3, 7, 14, 30];
+const NEW_CARDS_PER_DAY = 10;
+const TEST_MINUTES = 20;
+const QUESTION_BY_ID = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+const QUESTION_INDEX = Object.fromEntries(QUESTIONS.map((q, i) => [q.id, i]));
+const GRAMMAR_BY_ID = Object.fromEntries(GRAMMAR.map((g) => [g.id, g]));
+const tq = () => state.toeic;
+const sectionOf = (q) => TOEIC_PARTS[q.part].section;
+const ofPart = (...parts) => (q) => parts.includes(q.part);
+const LETTERS = ['A', 'B', 'C', 'D'];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const allWords = () => [...tq().myWords, ...VOCAB];
+const wordById = (id) => allWords().find((w) => w.id === id);
+const wordsOf = (theme) => allWords().filter((w) => theme === 'all' || w.theme === theme);
+
+function cardsToReview(theme = 'all') {
+  const t = todayISO();
+  const words = wordsOf(theme);
+  const due = words.filter((w) => tq().cards[w.id] && tq().cards[w.id].due <= t);
+  const left = Math.max(0, NEW_CARDS_PER_DAY - (tq().log[t]?.newCards || 0));
+  const fresh = words.filter((w) => !tq().cards[w.id]).slice(0, left);
+  return { due, fresh, total: due.length + fresh.length };
+}
+
+function toeicLog(date = todayISO()) {
+  return (tq().log[date] ||= { q: 0, ok: 0, cards: 0, newCards: 0 });
+}
+
+const roundScore = (acc) => Math.round((5 + acc * 490) / 5) * 5;
+function sectionEstimate(sec) {
+  const r = tq().recent[sec] || [];
+  if (r.length < 10) return null;
+  return roundScore(sum(r) / r.length);
+}
+function toeicEstimate() {
+  const L = sectionEstimate('L');
+  const R = sectionEstimate('R');
+  return { L, R, total: L !== null && R !== null ? L + R : null };
+}
+const levelOf = (score) => TOEIC_LEVELS.find((l) => score >= l.min);
+
+function toeicStreak() {
+  const log = tq().log;
+  const active = (d) => (log[d]?.q || 0) + (log[d]?.cards || 0) > 0;
+  let d = todayISO();
+  if (!active(d)) d = addDays(d, -1);
+  let n = 0;
+  while (active(d)) {
+    n++;
+    d = addDays(d, -1);
+  }
+  return n;
+}
+
+function partStats(filter) {
+  let n = 0;
+  let ok = 0;
+  let seen = 0;
+  let total = 0;
+  for (const q of QUESTIONS) {
+    if (!filter(q)) continue;
+    total++;
+    const s = tq().stats[q.id];
+    if (!s) continue;
+    seen++;
+    n += s.n;
+    ok += s.ok;
+  }
+  return { pct: n ? Math.round((ok / n) * 100) : null, seen, total };
+}
+
+// Les questions jamais vues ou souvent ratées passent en premier.
+function priority(id) {
+  const s = tq().stats[id];
+  return (s ? 1 + s.ok / s.n : 0) + Math.random() * 0.6;
+}
+function pickSingles(filter, n) {
+  return QUESTIONS.filter(filter)
+    .map((q) => [q.id, priority(q.id)])
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, n)
+    .map(([id]) => id);
+}
+function pickGroups(filter, k) {
+  const groups = {};
+  for (const q of QUESTIONS.filter(filter)) (groups[q.group] ||= []).push(q.id);
+  return Object.values(groups)
+    .map((ids) => [ids, sum(ids, priority) / ids.length])
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, k)
+    .flatMap(([ids]) => ids);
+}
+const inExamOrder = (ids) => [...new Set(ids)].sort((a, b) => QUESTION_INDEX[a] - QUESTION_INDEX[b]);
+
+function buildSession(mode) {
+  const [kind, arg] = mode.split(':');
+  const errors = tq().errors.filter((id) => QUESTION_BY_ID[id]);
+  if (kind === 'part') {
+    const grouped = ['p3', 'p4', 'p6', 'p7'].includes(arg);
+    const ids = grouped ? pickGroups(ofPart(arg), arg === 'p6' ? 2 : 3) : pickSingles(ofPart(arg), 10);
+    return { title: TOEIC_PARTS[arg].label, ids: inExamOrder(ids) };
+  }
+  if (kind === 'gram') return { title: `Grammaire · ${GRAMMAR_BY_ID[arg].title}`, ids: shuffle(pickSingles((q) => q.part === 'p5' && q.t === arg, 10)) };
+  if (kind === 'errors') return { title: 'Mes erreurs', ids: inExamOrder(shuffle(errors).slice(0, 15)) };
+  if (kind === 'test') {
+    const ids = [...pickSingles(ofPart('p2'), 5), ...pickGroups(ofPart('p3'), 1), ...pickGroups(ofPart('p4'), 1), ...pickSingles(ofPart('p5'), 8), ...pickGroups(ofPart('p6'), 1), ...pickGroups(ofPart('p7'), 1)];
+    return { title: 'Mini test', ids: inExamOrder(ids), timed: true, endAt: Date.now() + TEST_MINUTES * 60000 };
+  }
+  // Séance du jour : un peu de tout, avec quelques erreurs à retravailler.
+  const ids = [...shuffle(errors).slice(0, 3), ...pickSingles(ofPart('p2'), 3), ...pickGroups(ofPart('p3', 'p4'), 1), ...pickSingles(ofPart('p5'), 5), ...pickGroups(ofPart('p6', 'p7'), 1)];
+  return { title: 'Séance du jour', ids: inExamOrder(ids) };
+}
+
+function recordAnswer(q, ok) {
+  const T = tq();
+  const t = todayISO();
+  const s = (T.stats[q.id] ||= { n: 0, ok: 0, last: '' });
+  s.n++;
+  if (ok) s.ok++;
+  s.last = t;
+  const sec = sectionOf(q);
+  T.recent[sec] = [...(T.recent[sec] || []), ok ? 1 : 0].slice(-60);
+  const lg = toeicLog(t);
+  lg.q++;
+  if (ok) lg.ok++;
+  if (ok) T.errors = T.errors.filter((x) => x !== q.id);
+  else if (!T.errors.includes(q.id)) T.errors.push(q.id);
+}
+
+function sessionScore(z) {
+  const res = { L: [0, 0], R: [0, 0] };
+  for (const id of z.ids) {
+    const q = QUESTION_BY_ID[id];
+    const r = res[sectionOf(q)];
+    r[1]++;
+    if (z.answers[id] === q.a) r[0]++;
+  }
+  return res;
+}
+
+function finishQuiz() {
+  const z = ui.quiz;
+  if (!z || z.done) return;
+  z.done = true;
+  stopSpeaking();
+  if (z.timed) {
+    const { L, R } = sessionScore(z);
+    tq().tests.push({ date: todayISO(), L, R, score: roundScore(L[0] / (L[1] || 1)) + roundScore(R[0] / (R[1] || 1)) });
+  }
+}
+
+const audioKey = (q) => q.group || q.id;
+function nextQuestion() {
+  const z = ui.quiz;
+  const prev = QUESTION_BY_ID[z.ids[z.i]];
+  if (z.i >= z.ids.length - 1) return finishQuiz();
+  z.i++;
+  const q = QUESTION_BY_ID[z.ids[z.i]];
+  if (audioKey(q) !== audioKey(prev)) stopSpeaking();
+  // On lance l'écoute tout de suite, comme le jour de l'examen.
+  if (q.audio && !z.played[audioKey(q)]) {
+    z.played[audioKey(q)] = 1;
+    setTimeout(() => speak(q.audio), 250);
+  }
+}
+
+/* ---------- Audio (synthèse vocale du téléphone) ---------- */
+
+let speaking = false;
+const ttsSupported = () => 'speechSynthesis' in window;
+const englishVoices = () => (ttsSupported() ? speechSynthesis.getVoices().filter((v) => /^en[-_]/i.test(v.lang)) : []);
+if (ttsSupported()) {
+  speechSynthesis.getVoices();
+  speechSynthesis.addEventListener?.('voiceschanged', () => speechSynthesis.getVoices());
+}
+
+function refreshPlayButtons() {
+  document.querySelectorAll('[data-action="toeic-play"]').forEach((b) => {
+    if (!b.disabled || speaking) b.innerHTML = speaking ? '⏹ Arrêter' : b.dataset.label;
+  });
+}
+
+function speak(lines) {
+  if (!ttsSupported()) return toast('Ton navigateur ne sait pas lire l’audio 😕');
+  speechSynthesis.cancel();
+  const voices = englishVoices();
+  const us = voices.filter((v) => /en[-_]US/i.test(v.lang));
+  const pool = us.length >= 2 ? us : voices;
+  const find = (re) => pool.find((v) => re.test(v.name));
+  const female = find(/samantha|zira|aria|jenny|ava|allison|susan|karen|moira|serena|victoria|female|google us english/i) || pool[0];
+  const male = find(/daniel|alex|david|guy|aaron|fred|tom|arthur|rishi|\bmale/i) || pool.find((v) => v !== female) || pool[0];
+  const rate = ui.ttsSlow ? 0.75 : 0.95;
+  lines.forEach(([who, text], k) => {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = who === 'M' ? male : female;
+    u.lang = v?.lang || 'en-US';
+    if (v) u.voice = v;
+    if (!v || male === female) u.pitch = who === 'M' ? 0.75 : who === 'W' ? 1.25 : 1;
+    u.rate = rate;
+    if (k === lines.length - 1) {
+      u.onend = () => {
+        speaking = false;
+        refreshPlayButtons();
+      };
+      u.onerror = u.onend;
+    }
+    speechSynthesis.speak(u);
+  });
+  speaking = true;
+  refreshPlayButtons();
+}
+
+function stopSpeaking() {
+  if (ttsSupported()) speechSynthesis.cancel();
+  speaking = false;
+}
+
+const sayWord = (w) => speak([['W', w.en.replace(/\(.*?\)/g, '').replace(/\s*\/\s*/g, ', ')]]);
+
+/* ---------- Écrans ---------- */
+
+function toeicSettingsForm() {
+  const T = tq();
+  openForm({
+    title: 'Mon TOEIC 🎯',
+    fields: [
+      { name: 'target', label: 'Score visé (sur 990)', type: 'number', placeholder: '785' },
+      { name: 'examDate', label: 'Date de l’examen', type: 'date' },
+      { name: 'dailyGoal', label: 'Questions par jour', type: 'number', placeholder: '15' },
+      { name: 'daily', label: 'Me rappeler de réviser chaque jour (notifications)', type: 'checkbox' },
+      { name: 'time', label: 'Heure du rappel', type: 'time' },
+    ],
+    values: { target: T.target, examDate: T.examDate, dailyGoal: T.dailyGoal, daily: T.reminder.daily, time: T.reminder.time },
+    onSubmit: (d) => {
+      T.target = clamp(Math.round(d.target / 5) * 5 || 785, 10, 990);
+      T.examDate = d.examDate;
+      T.dailyGoal = clamp(Math.round(d.dailyGoal) || 15, 5, 100);
+      T.reminder = { daily: d.daily, time: d.time };
+      commit('C’est noté, on vise haut 🎯');
+    },
+  });
+}
+
+function myWordForm(w) {
+  openForm({
+    title: w ? 'Modifier le mot' : 'Ajouter un mot ⭐',
+    fields: [
+      { name: 'en', label: 'En anglais', required: true, placeholder: 'to meet a deadline' },
+      { name: 'fr', label: 'En français', required: true, placeholder: 'respecter une échéance' },
+      { name: 'ex', label: 'Phrase d’exemple (conseillé)', type: 'textarea', placeholder: 'We worked late to meet the deadline.' },
+    ],
+    values: w || {},
+    onSubmit: (d) => {
+      if (w) Object.assign(w, d);
+      else tq().myWords.unshift({ id: `perso-${uid()}`, theme: 'perso', ...d });
+      commit(w ? 'Mot modifié ✓' : 'Mot ajouté à tes cartes ⭐');
+    },
+    onDelete: w
+      ? () => {
+          tq().myWords = tq().myWords.filter((x) => x !== w);
+          delete tq().cards[w.id];
+          commit('Mot supprimé');
+        }
+      : null,
+  });
+}
+
+const levelDots = (box = -1) => `<span class="lvl" title="${box < 0 ? 'Nouveau' : `Niveau ${box}/5`}">${[1, 2, 3, 4, 5].map((k) => `<i class="${box >= k ? 'on' : ''}"></i>`).join('')}</span>`;
+const pctBadge = (pct) => (pct === null ? '<span class="badge">nouveau</span>' : `<span class="badge ${pct >= 80 ? 'good' : pct >= 55 ? 'warn' : 'bad'}">${pct} %</span>`);
+
+function viewToeic() {
+  const T = tq();
+  const t = todayISO();
+  const est = toeicEstimate();
+  const left = T.examDate ? daysBetween(t, T.examDate) : null;
+  const doneToday = T.log[t]?.q || 0;
+  const cards = cardsToReview();
+  const streak = toeicStreak();
+  const errors = T.errors.filter((id) => QUESTION_BY_ID[id]).length;
+  const last14 = Array.from({ length: 14 }, (_, i) => addDays(t, i - 13));
+  const lvl = est.total !== null ? levelOf(est.total) : null;
+  const learned = allWords().filter((w) => T.cards[w.id]?.box >= 1).length;
+  const exam =
+    left === null ? 'Ajoute la date de ton examen' : left > 1 ? `Examen dans ${plural(left, 'jour')}` : left === 1 ? 'Examen demain : repose-toi bien 💖' : left === 0 ? 'C’est le grand jour, tu vas briller ✨' : 'Examen passé : une nouvelle date ?';
+  const row = (action, ico, title, sub, extra = '') => `<li class="row tap" ${action}><div class="ico-box ${ico[1] || ''}">${ico[0]}</div><div class="grow"><div class="t">${title}</div><div class="s">${sub}</div>${extra}</div><span class="chev">${icon('right')}</span></li>`;
+  const parts = ['p2', 'p3', 'p4', 'p5', 'p6', 'p7'];
+
+  return `
+  <header class="dark-head">
+    <div class="head-row"><div><h1 class="title">TOEIC <span style="color:var(--pink-2)">🎯</span></h1><div class="subtitle">Objectif ${T.target} points${lvl ? ` · niveau actuel ${lvl.label}` : ''}</div></div>${backBtn('#/menu', true)}</div>
+    <div class="hero-card" role="button" tabindex="0" data-action="toeic-settings">
+      <div class="row1"><div class="ico-box round pink" style="font-size:22px">🗓️</div><div><div class="h">${exam}</div><div class="s">${T.examDate ? esc(cap(fmtLong.format(parseISO(T.examDate)))) : 'Touche ici pour régler ton objectif'}</div></div></div>
+      <div class="between"><span>Score estimé : <strong style="color:#fff">${est.total ?? '—'}</strong> / ${T.target}</span><span>${est.total !== null ? `${Math.min(100, Math.round((est.total / T.target) * 100))} %` : 'réponds à quelques questions'}</span></div>
+      ${progressBar(est.total ? (est.total / T.target) * 100 : 0, 'on-ink')}
+    </div>
+  </header>
+  <div class="sheet">
+    <section class="section">
+      ${secHead('Aujourd’hui')}
+      <div class="card flush"><ul class="list">
+        ${row('data-action="toeic-cards" data-theme="all"', ['📇', 'pink'], 'Cartes de vocabulaire', cards.total ? `${plural(cards.total, 'carte')} à réviser (${cards.due.length} à revoir, ${cards.fresh.length} nouvelles)` : 'Tout est révisé pour aujourd’hui ✨')}
+        ${row('data-action="toeic-start" data-mode="daily"', ['✏️', 'lilac'], 'Séance du jour', `${Math.min(doneToday, T.dailyGoal)}/${T.dailyGoal} questions ${doneToday >= T.dailyGoal ? '✓ objectif atteint 🎉' : ''}`, `<div style="margin-top:6px">${progressBar((doneToday / T.dailyGoal) * 100)}</div>`)}
+        ${errors ? row('data-action="toeic-start" data-mode="errors"', ['🔁', 'peach'], 'Mon carnet d’erreurs', `${plural(errors, 'question')} à retravailler`) : ''}
+      </ul></div>
+
+      <div class="tiles" style="padding:12px 0 0">
+        <div class="tile lilac"><div class="label">Score estimé</div><div class="big">${est.total ?? '—'}</div><div class="small">🎧 ${est.L ?? '—'} · 📖 ${est.R ?? '—'}</div></div>
+        <div class="tile peach"><div class="label">Série</div><div class="big">${plural(streak, 'jour')}</div><div class="small">${streak ? 'd’affilée, bravo 🔥' : 'commence aujourd’hui'}</div></div>
+      </div>
+      <div class="card mt"><div class="small muted" style="margin-bottom:8px">Mes 14 derniers jours de révision</div><div class="days14">${last14.map((d) => `<span class="${(T.log[d]?.q || 0) + (T.log[d]?.cards || 0) ? 'on' : ''} ${d === t ? 'today' : ''}" title="${esc(fmtDate(d))}">${parseISO(d).getDate()}</span>`).join('')}</div></div>
+
+      ${secHead('🎧📖 S’entraîner par partie')}
+      <div class="card flush"><ul class="list">${parts
+        .map((p) => {
+          const st = partStats(ofPart(p));
+          return `<li class="row tap" data-action="toeic-start" data-mode="part:${p}"><div class="ico-box ${TOEIC_PARTS[p].section === 'L' ? 'lilac' : 'pink'}">${TOEIC_PARTS[p].section === 'L' ? '🎧' : '📖'}</div><div class="grow"><div class="t">${esc(TOEIC_PARTS[p].label)}</div><div class="s">${st.seen}/${st.total} questions vues ${pctBadge(st.pct)}</div></div><span class="chev">${icon('right')}</span></li>`;
+        })
+        .join('')}</ul></div>
+
+      ${secHead('⏱️ Mini test chronométré')}
+      <div class="card">
+        <div class="small muted">26 questions des parties 2 à 7 en ${TEST_MINUTES} minutes. Comme le jour J : une seule écoute et la correction à la fin.</div>
+        <button class="btn pink block mt" data-action="toeic-start" data-mode="test">Commencer le test</button>
+        ${
+          T.tests.length
+            ? `<ul class="list mt">${T.tests
+                .slice(-5)
+                .reverse()
+                .map((x) => `<li class="row"><div class="grow"><div class="t">${x.score} points</div><div class="s">${esc(fmtDate(x.date))} · 🎧 ${x.L[0]}/${x.L[1]} · 📖 ${x.R[0]}/${x.R[1]}</div></div><span class="badge ${x.score >= T.target ? 'good' : 'pink'}">${esc(levelOf(x.score).label)}</span></li>`)
+                .join('')}</ul>`
+            : ''
+        }
+      </div>
+
+      ${secHead('📚 Apprendre')}
+      <div class="card flush"><ul class="list">
+        ${row('data-action="goto" data-href="#/toeic-vocab"', ['🗂️', 'pink'], 'Vocabulaire', `${learned}/${allWords().length} mots appris · ${Object.keys(VOCAB_THEMES).length} thèmes`)}
+        ${row('data-action="goto" data-href="#/toeic-grammaire"', ['🧩', 'lilac'], 'Fiches de grammaire', `${GRAMMAR.length} fiches avec exercices`)}
+      </ul></div>
+
+      ${secHead('💡 Ma méthode')}
+      <div class="card flush prayers">
+        <details><summary>Mon plan de révision</summary><p class="method">
+          ✦ <b>Chaque jour (15 à 20 min)</b> : tes cartes de vocabulaire, puis la séance du jour.<br>
+          ✦ <b>Le carnet d’erreurs</b> : une question ratée revient jusqu’à ce que tu la réussisses.<br>
+          ✦ <b>Une fois par semaine</b> : un mini test chronométré pour mesurer tes progrès.<br>
+          ✦ <b>Ta partie la plus faible</b> (le pourcentage le plus bas) : travaille-la deux fois plus.<br>
+          ✦ <b>En plus</b> : écoute de l’anglais tous les jours (podcasts, séries en VO avec sous-titres anglais) et passe au moins un test blanc officiel complet avant l’examen.
+        </p></details>
+        ${parts.map((p) => `<details><summary>${esc(TOEIC_PARTS[p].label)}</summary><p class="method">${esc(TOEIC_PARTS[p].tip)}</p></details>`).join('')}
+        <details><summary>${esc(TOEIC_PARTS.p1.label)}</summary><p class="method">Avant d’écouter, décris la photo dans ta tête : qui, quoi, où. Élimine les réponses qui parlent d’une action qu’on ne voit pas, ou qui utilisent un mot présent sur la photo dans une phrase fausse.</p></details>
+        <details><summary>Le jour J</summary><p class="method">L’examen dure 2 heures : 45 min d’écoute (100 questions) puis 75 min de lecture (100 questions). Il n’y a pas de point en moins pour une erreur : réponds à TOUTES les questions. En lecture, ne bloque jamais plus d’une minute sur une question, et garde du temps pour la partie 7.</p></details>
+      </div>
+    </section>
+  </div>`;
+}
+
+function viewToeicVocab() {
+  const T = tq();
+  const theme = ui.vocabTheme;
+  const words = wordsOf(theme);
+  const themes = { all: 'Tout', ...VOCAB_THEMES, perso: '⭐ Mes mots' };
+  const rev = cardsToReview(theme);
+  const mastered = words.filter((w) => T.cards[w.id]?.box >= 4).length;
+  const learned = words.filter((w) => T.cards[w.id]?.box >= 1).length;
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title">Vocabulaire 🗂️</h1><div class="subtitle">Les mots qui reviennent le plus au TOEIC</div></div>${backBtn('#/toeic')}</div>
+  </header>
+  <div class="chips">${Object.entries(themes)
+    .map(([k, v]) => `<button class="chip ${k === theme ? 'active' : ''}" data-action="vocab-theme" data-theme="${k}">${esc(v)}</button>`)
+    .join('')}</div>
+  <section class="section">
+    <div class="tiles" style="padding:6px 0 0">
+      <div class="tile"><div class="label">Appris</div><div class="big">${learned}/${words.length}</div><div class="small">mots déjà vus et sus</div></div>
+      <div class="tile lilac"><div class="label">Maîtrisés</div><div class="big">${mastered}</div><div class="small">niveau 4 ou 5 ✦</div></div>
+    </div>
+    <div class="btn-row mt">
+      <button class="btn pink" style="flex:1" data-action="toeic-cards" data-theme="${theme}" ${rev.total ? '' : 'disabled'}>📇 Réviser${rev.total ? ` (${rev.total})` : ' : tout est à jour'}</button>
+      <button class="btn soft" data-action="add-word">⭐ Ajouter un mot</button>
+    </div>
+    <div class="small muted mt">Chaque bonne réponse fait monter le mot d’un niveau : il revient dans 1, 3, 7, 14 puis 30 jours. Un mot oublié revient dès aujourd’hui.</div>
+    <div class="card flush mt"><ul class="list">${
+      words
+        .map((w) => {
+          const own = w.theme === 'perso';
+          return `<li class="row"><button class="icon-btn sm" data-action="say-word" data-id="${esc(w.id)}" aria-label="Écouter">🔊</button><div class="grow ${own ? 'tap' : ''}" ${own ? `data-action="edit-word" data-id="${esc(w.id)}"` : ''}><div class="t">${esc(w.en)}</div><div class="s">${esc(w.fr)}</div></div>${levelDots(T.cards[w.id]?.box ?? -1)}</li>`;
+        })
+        .join('') || `<li>${emptyMsg('Ajoute ici les mots que tu rencontres en révisant ⭐')}</li>`
+    }</ul></div>
+  </section>`;
+}
+
+function viewToeicCards() {
+  const c = ui.cards;
+  if (!c) return noSessionHTML('#/toeic-vocab');
+  if (c.i >= c.queue.length) {
+    return `
+    <header class="head"><div class="head-row"><div><h1 class="title">Bravo 💖</h1><div class="subtitle">Révision terminée</div></div>${backBtn('#/toeic')}</div></header>
+    <section class="section"><div class="card center-card">
+      <div style="font-size:54px">🎉</div>
+      <div class="big-num">${c.known}/${c.seen}</div>
+      <div class="muted">cartes sues du premier coup</div>
+      <div class="btn-row mt" style="justify-content:center"><a class="btn pink" href="#/toeic">Retour au TOEIC</a><button class="btn soft" data-action="toeic-start" data-mode="daily">✏️ Séance du jour</button></div>
+    </div></section>`;
+  }
+  const w = wordById(c.queue[c.i]);
+  const front = ui.cardDir === 'fr' ? w.fr : w.en;
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title">Cartes 📇</h1><div class="subtitle">${c.i + 1} / ${c.queue.length} · ${esc(VOCAB_THEMES[w.theme] || '⭐ Mes mots')}</div></div>${backBtn('#/toeic')}</div>
+    <div class="mt">${progressBar((c.i / c.queue.length) * 100)}</div>
+  </header>
+  <div class="chips">
+    <button class="chip ${ui.cardDir !== 'fr' ? 'active' : ''}" data-action="card-dir" data-dir="en">Anglais → français</button>
+    <button class="chip ${ui.cardDir === 'fr' ? 'active' : ''}" data-action="card-dir" data-dir="fr">Français → anglais</button>
+  </div>
+  <section class="section">
+    <div class="flashcard ${c.flipped ? 'flipped' : ''}" role="button" tabindex="0" data-action="card-flip">
+      ${levelDots(tq().cards[w.id]?.box ?? -1)}
+      <div class="front">${esc(front)}</div>
+      ${
+        c.flipped
+          ? `<div class="back"><div class="answer">${esc(ui.cardDir === 'fr' ? w.en : w.fr)}</div>${w.ex ? `<div class="ex">« ${esc(w.ex)} »</div>` : ''}</div>`
+          : '<div class="tap-hint">Cherche la réponse dans ta tête, puis touche la carte</div>'
+      }
+    </div>
+    <div class="btn-row mt" style="justify-content:center"><button class="btn soft sm" data-action="say-word" data-id="${esc(w.id)}">🔊 Écouter</button>${c.flipped && w.ex ? `<button class="btn soft sm" data-action="say-example" data-id="${esc(w.id)}">🔊 L’exemple</button>` : ''}</div>
+    ${
+      c.flipped
+        ? `<div class="answer-btns mt"><button class="btn bad-btn" data-action="card-answer" data-known="0">😕 Pas encore</button><button class="btn good-btn" data-action="card-answer" data-known="1">😊 Je savais</button></div>`
+        : '<button class="btn ink block mt" data-action="card-flip">Voir la réponse</button>'
+    }
+  </section>`;
+}
+
+function noSessionHTML(back = '#/toeic') {
+  return `<header class="head"><div class="head-row"><div><h1 class="title">TOEIC</h1></div>${backBtn(back)}</div></header>
+  <section class="section"><div class="card">${emptyMsg('Pas de séance en cours.')}<a class="btn pink block" href="#/toeic">Choisir un entraînement</a></div></section>`;
+}
+
+const fmtCountdown = (ms) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${pad(s % 60)}`;
+};
+
+function passageHTML(q) {
+  let h = esc(q.passage).replace(/\n/g, '<br>');
+  if (q.blank) h = h.replace(/\[(\d)\]/g, (m, n) => `<span class="blank ${Number(n) === q.blank ? 'now' : ''}">${n}</span>`);
+  return `<div class="card passage">${q.title ? `<div class="group-label" style="margin-top:0">${esc(q.title)}</div>` : ''}<div class="passage-text">${h}</div></div>`;
+}
+
+function viewToeicQuiz() {
+  const z = ui.quiz;
+  if (!z) return noSessionHTML();
+  if (z.done) return quizResultsHTML(z);
+  const q = QUESTION_BY_ID[z.ids[z.i]];
+  const picked = z.answers[q.id];
+  const reveal = picked !== undefined && !z.timed;
+  const ok = picked === q.a;
+  const playedOut = z.timed && z.played[audioKey(q)] >= 1 && !speaking;
+  const playLabel = playedOut ? '✓ Écouté' : z.played[audioKey(q)] ? '↺ Réécouter' : '▶ Écouter';
+  const g = q.t && GRAMMAR_BY_ID[q.t];
+
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title" style="font-size:24px">${esc(z.title)}</h1><div class="subtitle">Question ${z.i + 1} / ${z.ids.length}${z.timed ? ` · ⏱️ <strong id="quiz-timer">${fmtCountdown(z.endAt - Date.now())}</strong>` : ''}</div></div>${backBtn('#/toeic')}</div>
+    <div class="mt">${progressBar((z.i / z.ids.length) * 100)}</div>
+  </header>
+  <section class="section">
+    <div class="between" style="margin:4px 4px 10px"><span class="badge ${sectionOf(q) === 'L' ? 'info' : 'pink'}">${sectionOf(q) === 'L' ? '🎧' : '📖'} ${esc(TOEIC_PARTS[q.part].label)}</span>${q.title && q.audio ? `<span class="small muted">${esc(q.title)}</span>` : ''}</div>
+    ${
+      q.audio
+        ? `<div class="card audio-card">
+            ${ttsSupported() ? `<button class="btn pink" data-action="toeic-play" data-id="${q.id}" data-label="${esc(playLabel)}" ${playedOut ? 'disabled' : ''}>${speaking ? '⏹ Arrêter' : playLabel}</button>` : '<span class="small">Ton navigateur ne lit pas l’audio : lis le texte ci-dessous.</span>'}
+            ${z.timed ? '<span class="small muted">Une seule écoute, comme le jour J</span>' : `<button class="chip" data-action="toeic-rate">${ui.ttsSlow ? '🐢 Lent' : '🎧 Normal'}</button>`}
+          </div>
+          ${!ttsSupported() || reveal ? `<details class="card script mt" ${ttsSupported() ? '' : 'open'}><summary>📝 Le texte de l’audio</summary><p>${esc(q.script).replace(/\n/g, '<br>')}</p></details>` : ''}`
+        : ''
+    }
+    ${q.passage ? passageHTML(q) : ''}
+    <div class="question">${esc(q.q)}</div>
+    <div class="choices">${q.c
+      .map((txt, k) => {
+        const cls = reveal ? (k === q.a ? 'ok' : k === picked ? 'bad' : 'dim') : k === picked ? 'picked' : '';
+        return `<button class="choice ${cls}" data-action="toeic-pick" data-c="${k}" ${picked !== undefined ? 'disabled' : ''}><b>${LETTERS[k]}</b><span>${q.part === 'p2' ? (reveal ? esc(q.script.split('\n')[k + 1].slice(4)) : 'Réponse ' + LETTERS[k]) : esc(txt)}</span></button>`;
+      })
+      .join('')}</div>
+    ${
+      reveal
+        ? `<div class="card feedback ${ok ? 'ok' : 'bad'}">
+            <div class="t">${ok ? '✅ Bonne réponse !' : `❌ La bonne réponse était ${LETTERS[q.a]}`}</div>
+            <p>${esc(q.e)}</p>
+            ${g ? `<button class="btn soft sm" data-action="goto" data-href="#/toeic-grammaire/${g.id}">${g.emoji} Revoir la fiche « ${esc(g.title)} »</button>` : ''}
+          </div>
+          <button class="btn ink block mt" data-action="toeic-next">${z.i < z.ids.length - 1 ? 'Question suivante →' : 'Voir mon résultat'}</button>`
+        : ''
+    }
+    ${z.timed ? `<button class="btn ghost sm mt" data-action="toeic-finish">Terminer le test maintenant</button>` : ''}
+  </section>`;
+}
+
+function quizResultsHTML(z) {
+  const { L, R } = sessionScore(z);
+  const ok = L[0] + R[0];
+  const n = L[1] + R[1];
+  const pct = n ? Math.round((ok / n) * 100) : 0;
+  const wrong = z.ids.map((id) => QUESTION_BY_ID[id]).filter((q) => z.answers[q.id] !== q.a);
+  const score = z.timed ? tq().tests[tq().tests.length - 1]?.score : null;
+  const msg = pct >= 90 ? 'Incroyable, tu es prête 👑' : pct >= 75 ? 'Très beau travail 💖' : pct >= 50 ? 'Ça progresse, continue ✨' : 'Chaque erreur te fait progresser 💪';
+  return `
+  <header class="head"><div class="head-row"><div><h1 class="title">Résultat ✦</h1><div class="subtitle">${esc(z.title)}</div></div>${backBtn('#/toeic')}</div></header>
+  <section class="section">
+    <div class="card center-card">
+      <div class="big-num">${ok}/${n}</div>
+      <div class="muted">${pct} % de bonnes réponses · ${msg}</div>
+      ${score ? `<div class="mt"><span class="badge pink" style="font-size:14px;padding:6px 14px">Estimation : ${score} points (${esc(levelOf(score).label)})</span></div>` : ''}
+      <div class="small muted mt">${L[1] ? `🎧 Écoute ${L[0]}/${L[1]}` : ''}${L[1] && R[1] ? ' · ' : ''}${R[1] ? `📖 Lecture ${R[0]}/${R[1]}` : ''}</div>
+    </div>
+    <div class="btn-row mt">
+      ${wrong.length ? '<button class="btn pink" style="flex:1" data-action="toeic-start" data-mode="errors">🔁 Retravailler mes erreurs</button>' : ''}
+      <button class="btn soft" style="flex:1" data-action="toeic-start" data-mode="${esc(z.mode)}">Recommencer</button>
+    </div>
+    ${secHead(wrong.length ? `À revoir (${wrong.length})` : 'Aucune erreur 🎉')}
+    <div class="stack">${wrong
+      .map((q) => {
+        const p = z.answers[q.id];
+        const g = q.t && GRAMMAR_BY_ID[q.t];
+        const label = (k) => (q.part === 'p2' ? q.script.split('\n')[k + 1] : `(${LETTERS[k]}) ${q.c[k]}`);
+        return `<div class="card review">
+          <div class="small muted">${esc(TOEIC_PARTS[q.part].label)}${q.title ? ` · ${esc(q.title)}` : ''}</div>
+          <div class="t">${esc(q.part === 'p2' ? q.script.split('\n')[0] : q.part === 'p6' ? `Trou [${q.blank}]` : q.q)}</div>
+          ${p !== undefined ? `<div class="bad-txt">✗ ${esc(label(p))}</div>` : '<div class="muted small">Pas de réponse</div>'}
+          <div class="good-txt">✓ ${esc(label(q.a))}</div>
+          <p class="small">${esc(q.e)}</p>
+          ${g ? `<a class="see-all" href="#/toeic-grammaire/${g.id}">${g.emoji} Fiche « ${esc(g.title)} » ${icon('right')}</a>` : ''}
+        </div>`;
+      })
+      .join('')}</div>
+  </section>`;
+}
+
+function viewToeicGrammar(open) {
+  return `
+  <header class="head">
+    <div class="head-row"><div><h1 class="title">Grammaire 🧩</h1><div class="subtitle">Les règles qui tombent à chaque TOEIC</div></div>${backBtn('#/toeic')}</div>
+  </header>
+  <section class="section">
+    <div class="card flush prayers grammar">${GRAMMAR.map((g) => {
+      const st = partStats((q) => q.part === 'p5' && q.t === g.id);
+      return `<details ${open === g.id ? 'open' : ''} id="g-${g.id}"><summary><span>${g.emoji} ${esc(g.title)}</span>${pctBadge(st.pct)}</summary>
+        <div class="g-body">
+          <p class="rule">${esc(g.rule)}</p>
+          <ul>${g.points.map((x) => `<li>${x}</li>`).join('')}</ul>
+          <div class="trap">⚠️ <b>Piège :</b> ${g.trap}</div>
+          ${st.total ? `<button class="btn pink sm" data-action="toeic-start" data-mode="gram:${g.id}">✏️ M’entraîner (${st.total} questions)</button>` : ''}
+        </div></details>`;
+    }).join('')}</div>
+  </section>`;
+}
+
+const toeicActions = {
+  'toeic-settings': () => toeicSettingsForm(),
+  'toeic-start': (el) => {
+    const s = buildSession(el.dataset.mode);
+    if (!s.ids.length) return toast(el.dataset.mode === 'errors' ? 'Aucune erreur à retravailler 🎉' : 'Pas de question disponible');
+    stopSpeaking();
+    ui.quiz = { mode: el.dataset.mode, i: 0, answers: {}, played: {}, done: false, timed: false, ...s };
+    if (location.hash === '#/toeic-quiz') render();
+    else location.hash = '#/toeic-quiz';
+    window.scrollTo(0, 0);
+  },
+  'toeic-pick': (el) => {
+    const z = ui.quiz;
+    if (!z || z.done) return;
+    const q = QUESTION_BY_ID[z.ids[z.i]];
+    if (z.answers[q.id] !== undefined) return;
+    const choice = Number(el.dataset.c);
+    z.answers[q.id] = choice;
+    recordAnswer(q, choice === q.a);
+    if (z.timed) {
+      nextQuestion();
+      window.scrollTo(0, 0);
+    }
+    commit();
+  },
+  'toeic-next': () => {
+    nextQuestion();
+    commit();
+    window.scrollTo(0, 0);
+  },
+  'toeic-finish': () => {
+    if (!confirm('Terminer le test ? Les questions sans réponse comptent comme fausses.')) return;
+    finishQuiz();
+    commit();
+    window.scrollTo(0, 0);
+  },
+  'toeic-play': () => {
+    const z = ui.quiz;
+    const q = QUESTION_BY_ID[z.ids[z.i]];
+    if (speaking) {
+      stopSpeaking();
+      return refreshPlayButtons();
+    }
+    z.played[audioKey(q)] = (z.played[audioKey(q)] || 0) + 1;
+    speak(q.audio);
+  },
+  'toeic-rate': () => {
+    ui.ttsSlow = !ui.ttsSlow;
+    render();
+    toast(ui.ttsSlow ? '🐢 Lecture lente' : '🎧 Vitesse normale');
+  },
+  'toeic-cards': (el) => {
+    const { due, fresh } = cardsToReview(el.dataset.theme || 'all');
+    const queue = [...shuffle(due), ...fresh].map((w) => w.id);
+    if (!queue.length) return toast('Tout est révisé pour aujourd’hui ✨');
+    ui.cards = { queue, i: 0, flipped: false, known: 0, seen: 0, retries: {} };
+    location.hash = '#/toeic-cartes';
+  },
+  'card-flip': () => {
+    if (!ui.cards) return;
+    ui.cards.flipped = !ui.cards.flipped;
+    render();
+  },
+  'card-dir': (el) => {
+    ui.cardDir = el.dataset.dir;
+    if (ui.cards) ui.cards.flipped = false;
+    render();
+  },
+  'card-answer': (el) => {
+    const c = ui.cards;
+    const id = c.queue[c.i];
+    const known = el.dataset.known === '1';
+    const t = todayISO();
+    const lg = toeicLog(t);
+    let card = tq().cards[id];
+    if (!card) {
+      card = tq().cards[id] = { box: 0, due: t };
+      lg.newCards++;
+    }
+    lg.cards++;
+    const firstTry = !c.retries[id];
+    if (firstTry) c.seen++;
+    if (known) {
+      if (firstTry) c.known++;
+      card.box = Math.min(5, card.box + 1);
+      card.due = addDays(t, SRS_DAYS[card.box]);
+    } else {
+      card.box = 0;
+      card.due = t;
+      // Le mot oublié revient en fin de séance (deux fois au maximum).
+      c.retries[id] = (c.retries[id] || 0) + 1;
+      if (c.retries[id] <= 2) c.queue.push(id);
+    }
+    c.i++;
+    c.flipped = false;
+    commit();
+  },
+  'say-word': (el) => {
+    const w = wordById(el.dataset.id);
+    if (w) sayWord(w);
+  },
+  'say-example': (el) => {
+    const w = wordById(el.dataset.id);
+    if (w?.ex) speak([['W', w.ex]]);
+  },
+  'vocab-theme': (el) => {
+    ui.vocabTheme = el.dataset.theme;
+    render();
+  },
+  'add-word': () => myWordForm(),
+  'edit-word': (el) => myWordForm(tq().myWords.find((w) => w.id === el.dataset.id)),
+};
+
+let quizTimer = null;
+function syncQuizTimer(active) {
+  if (!active) {
+    clearInterval(quizTimer);
+    quizTimer = null;
+    return;
+  }
+  if (quizTimer) return;
+  quizTimer = setInterval(() => {
+    const z = ui.quiz;
+    if (!z || !z.timed || z.done || parseRoute().name !== 'toeic-quiz') return syncQuizTimer(false);
+    const left = z.endAt - Date.now();
+    if (left <= 0) {
+      finishQuiz();
+      commit('⏰ Temps écoulé !');
+      return;
+    }
+    const el = $('#quiz-timer');
+    if (el) el.textContent = fmtCountdown(left);
+  }, 1000);
+}
 
 /* ============================================================
    Carte des voyages
@@ -2623,6 +3366,7 @@ function viewMenu() {
       ${sc('#/inspirations', 'bookmark', 'Collections', 'pink')}
       ${sc('#/carte', 'plane', 'Ma carte', 'peach')}
       ${sc('#/recettes', 'bowl', 'Recettes', 'pink')}
+      ${sc('#/toeic', 'book', 'TOEIC', 'lilac')}
     </div>
     <div class="card flush mt"><ul class="list">
       <li><button class="row" style="width:100%;border:0;background:none;text-align:left;cursor:pointer" data-action="edit-profile"><div class="ico-box">${icon('user')}</div><div class="grow t">Mon profil</div><span style="color:var(--pink)">♥</span><span class="chev">${icon('right')}</span></button></li>
@@ -2869,6 +3613,11 @@ const ROUTES = {
   graphiques: viewCharts,
   recette: viewRecipe,
   inspirations: viewInspirations,
+  toeic: viewToeic,
+  'toeic-quiz': viewToeicQuiz,
+  'toeic-cartes': viewToeicCards,
+  'toeic-vocab': viewToeicVocab,
+  'toeic-grammaire': viewToeicGrammar,
 };
 const TAB_OF = { accueil: 'accueil', taches: 'taches', calendrier: 'calendrier' };
 // Anciennes adresses (version précédente de l'app).
@@ -2898,6 +3647,8 @@ function render() {
   document.querySelectorAll('.tabbar a[data-tab]').forEach((a) => a.classList.toggle('active', a.dataset.tab === (TAB_OF[name] || 'menu')));
   if (name === 'reglages' && ui.pushDevice === 'unknown') refreshPushDevice();
   if (name === 'carte' && !splash) setupMap();
+  syncQuizTimer(name === 'toeic-quiz' && !!ui.quiz?.timed && !ui.quiz.done);
+  if (name === 'toeic-grammaire' && arg) document.getElementById(`g-${arg}`)?.scrollIntoView({ block: 'start' });
 }
 
 /* ============================================================
@@ -3444,6 +4195,8 @@ const actions = {
   },
 };
 
+Object.assign(actions, toeicActions);
+
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el || el.dataset.action === 'import') return;
@@ -3565,6 +4318,7 @@ function applyTheme() {
 
 window.addEventListener('hashchange', () => {
   closeDialog();
+  stopSpeaking();
   render();
   window.scrollTo(0, 0);
 });

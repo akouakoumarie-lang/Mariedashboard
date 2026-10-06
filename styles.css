@@ -977,3 +977,92 @@ input[type="range"] { width: 100%; accent-color: var(--pink); }
 .ctable th:first-child, .ctable td:first-child { text-align: left; }
 .ctable .pos { color: var(--good); font-weight: 700; }
 .ctable .neg { color: var(--bad); font-weight: 700; }
+
+/* ---------- TOEIC ---------- */
+.question { font-weight: 700; font-size: 16.5px; line-height: 1.45; margin: 14px 4px 10px; }
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.choice b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--blush); font-size: 13px; }
+.choice[disabled] { cursor: default; }
+.choice.picked { border-color: var(--pink); }
+.choice.picked b { background: var(--pink); color: #fff; }
+.choice.ok { border-color: var(--good); background: var(--good-soft); }
+.choice.ok b { background: var(--good); color: #fff; }
+.choice.bad { border-color: var(--bad); background: var(--bad-soft); }
+.choice.bad b { background: var(--bad); color: #fff; }
+.choice.dim { opacity: .55; }
+.feedback { margin-top: 12px; border-width: 2px; }
+.feedback.ok { border-color: var(--good); }
+.feedback.bad { border-color: var(--bad); }
+.feedback .t { font-weight: 800; }
+.feedback p { margin: 6px 0 10px; line-height: 1.5; }
+.audio-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.script summary, .grammar summary { cursor: pointer; }
+.script summary { font-weight: 700; }
+.script p { margin: 10px 0 0; line-height: 1.55; font-size: 14.5px; }
+.passage { margin-top: 10px; }
+.passage-text { font-family: var(--serif); font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.blank { display: inline-block; min-width: 46px; padding: 0 8px; margin: 0 2px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--muted); text-align: center; font-family: var(--sans); font-size: 12px; font-weight: 800; color: var(--muted); }
+.blank.now { background: var(--pink-soft); border: 1px solid var(--pink); color: var(--pink); }
+.center-card { text-align: center; padding: 24px 16px; }
+.big-num { font-family: var(--serif); font-size: 46px; font-weight: 700; line-height: 1.1; }
+.review .t { font-weight: 700; margin: 4px 0 6px; }
+.review p { margin: 8px 0; line-height: 1.5; }
+.good-txt { color: var(--good); font-weight: 700; font-size: 14px; }
+.bad-txt { color: var(--bad); font-weight: 700; font-size: 14px; text-decoration: line-through; }
+.lvl { display: inline-flex; gap: 3px; flex-shrink: 0; }
+.lvl i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.lvl i.on { background: var(--pink); }
+.flashcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 260px;
+  padding: 26px 18px;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 20%, rgba(255, 46, 138, .3), transparent 60%), linear-gradient(rgba(23, 17, 26, .75), rgba(23, 17, 26, .75)), url("leopard-pink.svg") 0 0 / 200px, #17111a;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  -webkit-tap-highlight-color: transparent;
+}
+.flashcard .lvl { position: absolute; top: 16px; right: 18px; }
+.flashcard .lvl i { background: rgba(255, 255, 255, .25); }
+.flashcard .lvl i.on { background: var(--pink-2); }
+.flashcard .front { font-family: var(--serif); font-size: 28px; font-weight: 700; line-height: 1.2; }
+.flashcard.flipped .front { font-size: 20px; opacity: .7; }
+.flashcard .answer { font-size: 24px; font-weight: 800; color: #ffc2dc; }
+.flashcard .ex { margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 15.5px; line-height: 1.5; opacity: .9; }
+.flashcard .tap-hint { font-size: 12.5px; opacity: .6; }
+.answer-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn.good-btn { background: var(--good-soft); color: var(--good); border-color: transparent; font-weight: 800; padding: 14px; }
+.btn.bad-btn { background: var(--bad-soft); color: var(--bad); border-color: transparent; font-weight: 800; padding: 14px; }
+.prayers p.method { font-family: var(--sans); font-size: 14px; }
+.grammar summary { align-items: center; gap: 8px; }
+.grammar summary::after { display: none; }
+.g-body { padding: 0 2px 16px; font-size: 14.5px; line-height: 1.55; }
+.g-body .rule { font-family: var(--sans); font-size: 14.5px; font-weight: 600; margin: 0 0 8px; }
+.g-body ul { margin: 0 0 10px; padding-left: 18px; }
+.g-body li + li { margin-top: 6px; }
+.g-body b { color: var(--pink); }
+.trap { padding: 10px 12px; border-radius: 14px; background: var(--warn-soft); margin-bottom: 12px; }
+.trap b { color: var(--warn); }
+.feedback .btn { white-space: normal; text-align: left; }

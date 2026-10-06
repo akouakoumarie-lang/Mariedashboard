@@ -59,3 +59,7 @@ Solde au début du mois (salaire du mois dernier compris)
 − dépenses du mois
 = budget disponible jusqu'à la fin du mois
 ```
+
+## Cotonou Box
+
+Le dossier [`cotonou-box/`](cotonou-box/) contient le site vitrine e-commerce **Cotonou Box — Le Bénin en cadeau** (HTML, CSS, JS, sans dépendance) : 10 univers, 14 coffrets, fiche produit, panier, calendrier de l’Avent, photos du Bénin issues de Wikimedia Commons (crédits en bas de page).

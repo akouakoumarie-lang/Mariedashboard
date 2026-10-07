@@ -4,52 +4,73 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cotonou Box — Le Bénin en cadeau</title>
-  <meta name="description" content="Des coffrets soigneusement composés pour faire découvrir, célébrer et partager les trésors du Bénin.">
+  <meta name="description" content="Des coffrets qui racontent une histoire : produits authentiques, artisanaux et raffinés, issus des richesses du Bénin.">
   <meta name="theme-color" content="#0F3B2E">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Manrope:wght@400;500;600;700&family=Parisienne&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&family=Parisienne&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="emblem" viewBox="0 0 60 60">
+      <path d="M30 4C37 13 37 24 30 31 23 24 23 13 30 4Z"/>
+      <path d="M29 31C21 30 13 22 11 11 21 12 28 21 29 31Z"/>
+      <path d="M31 31C39 30 47 22 49 11 39 12 32 21 31 31Z"/>
+      <path d="M29 37C21 40 11 38 5 29 15 26 24 30 29 37Z"/>
+      <path d="M31 37C39 40 49 38 55 29 45 26 36 30 31 37Z"/>
+      <path d="M28.6 30h2.8v24h-2.8z"/>
+      <path d="M30 54c-4-5-9-6-13-4 4 3 9 4 13 4zm0 0c4-5 9-6 13-4-4 3-9 4-13 4z"/>
+    </symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10"/><path d="M3 7h18v3H3zM12 7v13M12 7c-1.5-4-6-4-5.5-1 .4 1.6 3.5 1 5.5 1zm0 0c1.5-4 6-4 5.5-1-.4 1.6-3.5 1-5.5 1z"/></g></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.2l2.2 11h10.4l2-8H6.3"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/></g></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6.5a3 3 0 016 0V8"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></g></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></g></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.6 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  </svg>
 
-  <div class="announce">
-    <p>Livraison dans toute l’Afrique et en Europe · Coffrets composés à la main à Cotonou</p>
+  <div class="topbar">
+    <p>Livraison à Cotonou et partout au Bénin <span class="topbar__sep">|</span> Offrez le meilleur du Bénin <svg class="ico ico--xs"><use href="#i-heart"/></svg></p>
   </div>
 
-  <header class="header" id="top">
+  <header class="header">
     <div class="header__inner">
       <button class="icon-btn header__menu" id="menuBtn" aria-label="Ouvrir le menu" aria-expanded="false">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
       </button>
 
       <a class="logo" href="#top" aria-label="Cotonou Box, accueil">
-        <span class="logo__mark" data-emblem="34"></span>
-        <span class="logo__words"><span class="logo__text">Cotonou Box</span><span class="logo__tag">Le Bénin en cadeau</span></span>
+        <svg class="logo__emblem" aria-hidden="true"><use href="#emblem"/></svg>
+        <span class="logo__name">Cotonou Box</span>
+        <span class="logo__tag">Le Bénin en cadeau</span>
       </a>
 
-      <nav class="header__nav" aria-label="Navigation principale">
-        <a href="#c/tous">Coffrets</a>
-        <a href="#univers">Collections</a>
-        <a href="#avent">Calendrier de l’Avent</a>
-        <a href="#maison">La maison</a>
-        <a href="#app">L’application</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="#top" class="is-current">Accueil</a>
+        <a href="#coffrets" data-filter="tous">Nos coffrets</a>
+        <div class="nav__drop">
+          <button class="nav__toggle" id="collToggle" aria-expanded="false" aria-controls="collMenu">Collections
+            <svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </button>
+          <div class="nav__menu" id="collMenu" hidden></div>
+        </div>
+        <a href="#coffrets" data-filter="made-in-benin">Made in Benin</a>
+        <a href="#a-propos">À propos</a>
       </nav>
 
-      <div class="currency" role="group" aria-label="Devise">
-        <button data-cur="FCFA">FCFA</button><button data-cur="EUR">€</button>
+      <div class="header__icons">
+        <button class="icon-btn" id="searchBtn" aria-label="Rechercher un coffret"><svg class="ico"><use href="#i-search"/></svg></button>
+        <button class="icon-btn" id="accountBtn" aria-label="Mon compte"><svg class="ico"><use href="#i-user"/></svg></button>
+        <button class="icon-btn cart-btn" id="cartBtn" aria-label="Ouvrir le panier"><svg class="ico"><use href="#i-bag"/></svg><span id="cartCount">(0)</span></button>
       </div>
-
-      <button class="icon-btn cart-btn" id="cartBtn" aria-label="Ouvrir le panier">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8V6.5a3 3 0 016 0V8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-        <span class="cart-btn__count" id="cartCount" hidden>0</span>
-      </button>
     </div>
-
-    <nav class="cats" aria-label="Catégories">
-      <div class="cats__track" id="catNav"></div>
-    </nav>
+    <div class="search" id="searchBar" hidden>
+      <label class="sr-only" for="searchInput">Rechercher un coffret</label>
+      <input type="search" id="searchInput" placeholder="Rechercher un coffret, un produit… (miel, karité, avent)">
+    </div>
   </header>
 
   <!-- Menu mobile -->
@@ -63,289 +84,127 @@
     </div>
   </div>
 
-  <main>
+  <main id="top">
     <!-- HERO -->
     <section class="hero">
-      <div class="hero__scene" id="heroScene" aria-hidden="true"></div>
-      <div class="hero__inner">
-        <div class="hero__content">
-          <span class="hero__emblem" data-emblem="64"></span>
-          <p class="hero__brand">Cotonou Box</p>
-          <h1 class="hero__title">Le Bénin <em>en cadeau.</em></h1>
-          <p class="hero__lead">Des coffrets soigneusement composés pour faire découvrir, célébrer et partager les trésors du Bénin.</p>
-          <div class="hero__ctas">
-            <a href="#c/tous" class="btn btn--green">Découvrir nos coffrets</a>
-            <a href="#avent" class="btn btn--line">Calendrier de l’Avent</a>
-          </div>
-        </div>
-
-        <div class="hero__stage">
-          <div class="stage__advent art" data-art="advent:calendrier-avent"></div>
-          <div class="stage__box art" data-art="product:signature"></div>
-          <aside class="tag tag--box">
-            <p class="tag__title">Exemple de coffret</p>
-            <p class="tag__price" data-price="35000"></p>
-            <ul><li>Gourmandise</li><li>Objet artisanal</li><li>Bougie</li><li>Carte personnalisée</li></ul>
-          </aside>
-          <aside class="tag tag--advent">
-            <p class="tag__title">Calendrier de l’Avent</p>
-            <p class="tag__sub">24 découvertes béninoises</p>
-            <p class="tag__price" data-price="45000"></p>
-          </aside>
-        </div>
+      <img class="hero__img" src="photos/hero.jpg" alt="Coffret Cotonou Box ouvert : miel, bougie, huile, noix de cajou, pagne wax et carte « Akpé, merci »" fetchpriority="high">
+      <div class="hero__content">
+        <p class="hero__eyebrow">Le Bénin en cadeau.</p>
+        <h1 class="hero__title">Des coffrets qui racontent une histoire.</h1>
+        <p class="hero__lead">Découvrez une sélection de produits authentiques, artisanaux et raffinés, issus des richesses du Bénin.</p>
+        <a class="btn btn--green" href="#coffrets" data-filter="tous">Découvrir nos coffrets <svg class="ico ico--sm"><use href="#i-arrow"/></svg></a>
       </div>
-
-      <ul class="perks">
-        <li><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="12" width="22" height="15" rx="1"/><path d="M4 12h24v-4H4zM16 8v19M16 8c-2-5-8-5-7-1 1 2 5 1 7 1zm0 0c2-5 8-5 7-1-1 2-5 1-7 1z"/></svg><span>Coffrets<br>cadeaux</span></li>
-        <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4c6 7 8 12 8 16a8 8 0 01-16 0c0-4 2-9 8-16z"/><path d="M16 28V17m0 4l-4-4m4 1l4-4"/></svg><span>Produits<br>locaux</span></li>
-        <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 6h12l-2 5c4 2 6 6 6 10 0 4-4 7-10 7S6 25 6 21c0-4 2-8 6-10z"/><path d="M9 18h14M8 22h16"/></svg><span>Artisanat<br>béninois</span></li>
-        <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 9h16v13H3zM19 13h6l4 5v4H19z"/><circle cx="9" cy="24" r="2.5"/><circle cx="24" cy="24" r="2.5"/></svg><span>Livraison Afrique<br>&amp; Europe</span></li>
-      </ul>
     </section>
 
-    <!-- UNIVERS -->
-    <section class="section" id="univers">
-      <div class="section__head section__head--center">
-        <p class="eyebrow">Les collections</p>
-        <h2 class="section__title">Un pays, <em>mille façons</em> de l’offrir</h2>
-      </div>
-      <div class="universes" id="universes"></div>
+    <!-- COLLECTIONS -->
+    <section class="collections" id="collections" aria-labelledby="collTitle">
+      <h2 class="eyebrow eyebrow--gold" id="collTitle">Parcourir nos collections</h2>
+      <div class="collections__row" id="collectionsRow"></div>
     </section>
 
     <!-- COFFRETS -->
-    <section class="section section--tint" id="coffrets">
-      <div class="section__head section__head--row">
+    <section class="featured" id="coffrets" aria-labelledby="featTitle">
+      <div class="featured__head">
         <div>
-          <p class="eyebrow">La boutique</p>
-          <h2 class="section__title" id="collectionTitle">Tous nos coffrets</h2>
-          <p class="section__sub" id="collectionSub"></p>
+          <h2 class="featured__title" id="featTitle">Nos coffrets phares</h2>
+          <p class="featured__sub" id="featSub">Des créations uniques pour toutes les occasions.</p>
         </div>
-        <label class="sort">
-          <span>Trier</span>
-          <select id="sortSelect">
-            <option value="featured">Sélection de la maison</option>
-            <option value="price-asc">Prix croissant</option>
-            <option value="price-desc">Prix décroissant</option>
-          </select>
-        </label>
+        <a class="link-arrow" href="#coffrets" data-filter="tous">Voir tous les coffrets <svg class="ico ico--sm"><use href="#i-arrow"/></svg></a>
       </div>
-      <div class="filters" id="filters" role="tablist" aria-label="Filtrer les coffrets"></div>
-      <div class="grid" id="productGrid"></div>
+      <div class="cards" id="productGrid"></div>
     </section>
 
-    <!-- MANIFESTE -->
-    <section class="manifesto" id="maison">
-      <div class="manifesto__media">
-        <figure class="ph manifesto__photo"><img data-photo="femmes" alt="Femmes béninoises en tenue traditionnelle du sud du Bénin" loading="lazy"></figure>
-        <div class="manifesto__still art" data-art="still:beaute"></div>
+    <!-- BANNIÈRE -->
+    <section class="banner" aria-labelledby="bannerTitle">
+      <img class="banner__img" src="photos/banniere.jpg" alt="Femme béninoise au foulard wax, et la ville de Cotonou au coucher du soleil" loading="lazy">
+      <div class="banner__content">
+        <p class="eyebrow eyebrow--gold">Un cadeau pour vos proches à Cotonou</p>
+        <h2 class="banner__title" id="bannerTitle">Envoyez un peu de bonheur au Bénin, depuis la France <span>ou où que vous soyez.</span></h2>
+        <a class="btn btn--green" href="#a-propos">En savoir plus <svg class="ico ico--sm"><use href="#i-arrow"/></svg></a>
       </div>
-      <div class="manifesto__text">
-        <p class="eyebrow">La maison</p>
-        <h2 class="section__title">Pas des souvenirs.<br><em>Des trésors.</em></h2>
-        <p>Cotonou Box est née d’une envie simple : montrer le Bénin tel qu’on le vit. Le karité qu’on achète au Nord, le kinkéliba des matins, les tentures appliquées d’Abomey, l’ananas pain de sucre qu’on ne trouve nulle part ailleurs.</p>
-        <p>Nous travaillons directement avec des coopératives de femmes, des ateliers familiaux et de jeunes créateurs béninois. Ils fixent leurs prix, nous racontons leur travail.</p>
-        <p class="script">Plus qu’une box, une expérience.</p>
-        <dl class="stats">
-          <div><dt>32</dt><dd>artisans &amp; producteurs partenaires</dd></div>
-          <div><dt>9</dt><dd>coopératives de femmes</dd></div>
-          <div><dt>85 %</dt><dd>du contenu fabriqué au Bénin</dd></div>
-        </dl>
-      </div>
+      <p class="banner__script">Cotonou<br>vous attend <svg class="ico ico--sm"><use href="#i-heart"/></svg></p>
     </section>
 
-    <!-- AVENT -->
-    <section class="advent" id="avent">
-      <div class="advent__art art" data-art="advent:avent-big"></div>
-      <div class="advent__text">
-        <p class="eyebrow eyebrow--gold">Édition limitée · Noël 2026</p>
-        <h2 class="section__title section__title--light">24 jours<br><em>au Bénin</em></h2>
-        <p>Notre calendrier de l’Avent : beurre de karité fouetté, noix de cajou caramélisées, kinkéliba, savon noir, un petit bijou en laiton d’artisan… Un voyage sensoriel, chaque matin, jusqu’à Noël.</p>
-        <ul class="advent__list">
-          <li>24 découvertes, plus de 70 % fabriquées au Bénin</li>
-          <li>Fenêtres habillées de tissus wax</li>
-          <li>Série numérotée de 500 exemplaires</li>
-        </ul>
-        <div class="advent__buy">
-          <span class="advent__price" data-price="45000"></span>
-          <button class="btn btn--gold" data-add="calendrier-avent">Réserver le mien</button>
-        </div>
+    <!-- RÉASSURANCE -->
+    <section class="trust" aria-label="Nos engagements">
+      <div class="trust__item">
+        <svg class="trust__ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 25C8 13 15 6 26 5c0 11-6 19-17 19zM6 27l10-10" /></svg>
+        <p><strong>Produits authentiques</strong>Sélectionnés avec soin au Bénin</p>
       </div>
-    </section>
-
-    <!-- APPLICATION -->
-    <section class="section app" id="app">
-      <div class="app__text">
-        <p class="eyebrow">L’application · Bientôt</p>
-        <h2 class="section__title">Tout votre univers Cotonou Box <em>dans votre poche</em></h2>
-        <ul class="app__features">
-          <li><span>✦</span>Découvrir les collections</li>
-          <li><span>✦</span>Commander facilement, en FCFA ou en euros</li>
-          <li><span>✦</span>Suivre sa commande jusqu’à la porte</li>
-          <li><span>✦</span>Offrir un cadeau à un proche au pays</li>
-          <li><span>✦</span>Être informé des nouveautés</li>
-        </ul>
-        <p class="script">Plus qu’une box, une expérience.</p>
+      <div class="trust__item">
+        <svg class="trust__ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 8h16v14H3zM19 12h6l4 5v5H19z"/><circle cx="9" cy="24" r="2.5"/><circle cx="24" cy="24" r="2.5"/></svg>
+        <p><strong>Livraison au Bénin</strong>Rapide et sécurisée</p>
       </div>
-      <div class="phones">
-        <div class="phone phone--back">
-          <div class="phone__screen">
-            <div class="ps-head"><span>‹</span><b>Ma commande</b><span></span></div>
-            <p class="ps-ref">#CB2026-001</p>
-            <ol class="ps-track">
-              <li class="done"><b>Commande confirmée</b><small>12 nov. · 10 h 24</small></li>
-              <li class="done"><b>En préparation à Cotonou</b><small>12 nov. · 14 h 30</small></li>
-              <li class="done"><b>En livraison</b><small>13 nov. · 09 h 15</small></li>
-              <li><b>Livrée</b><small>Prévu le 14 nov.</small></li>
-            </ol>
-          </div>
-        </div>
-        <div class="phone">
-          <div class="phone__screen">
-            <p class="ps-hello">Bonjour Marie 👋</p>
-            <p class="ps-small">Que souhaitez-vous offrir aujourd’hui ?</p>
-            <div class="ps-search">Rechercher un coffret…</div>
-            <div class="ps-hero art" data-art="product:prestige"><span>Coffrets cadeaux<br><small>pour toutes les occasions</small></span></div>
-            <p class="ps-h">Nos collections</p>
-            <div class="ps-grid">
-              <div><div class="art" data-art="product:rituel-karite"></div><small>Beauté</small></div>
-              <div><div class="art" data-art="product:grand-marche"></div><small>Gourmand</small></div>
-            </div>
-            <nav class="ps-tabs"><span class="on">Accueil</span><span>Catalogue</span><span>Panier</span><span>Compte</span></nav>
-          </div>
-        </div>
+      <div class="trust__item">
+        <svg class="trust__ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l10 4v8c0 7-4.5 11.5-10 14C10.5 26.5 6 22 6 15V7z"/><path d="M11.5 16l3.2 3.2 6-6.4"/></svg>
+        <p><strong>Paiement sécurisé</strong>100 % confiance</p>
       </div>
-    </section>
-
-    <!-- CARNET -->
-    <section class="section section--tint" id="carnet">
-      <div class="section__head">
-        <p class="eyebrow">Carnet du Bénin</p>
-        <h2 class="section__title">D’où viennent <em>nos trésors</em></h2>
-      </div>
-      <div class="mosaic">
-        <figure class="mosaic__item mosaic__item--tall ph"><img data-photo="tataSomba" alt="Tata Somba, habitat traditionnel de l’Atacora" loading="lazy"><figcaption><strong>Atacora</strong>Tatas somba et karité du Nord</figcaption></figure>
-        <figure class="mosaic__item ph"><img data-photo="abomey" alt="Palais royaux d’Abomey" loading="lazy"><figcaption><strong>Abomey</strong>Tentures des palais royaux</figcaption></figure>
-        <figure class="mosaic__item ph"><img data-photo="ganvie3" alt="Maisons sur pilotis à Ganvié" loading="lazy"><figcaption><strong>Ganvié</strong>La Venise de l’Afrique</figcaption></figure>
-        <figure class="mosaic__item ph"><img data-photo="ouidahPlage" alt="Plage de Ouidah" loading="lazy"><figcaption><strong>Ouidah</strong>La mémoire et l’océan</figcaption></figure>
-        <figure class="mosaic__item mosaic__item--wide ph"><img data-photo="grandPopo" alt="La Bouche du Roy à Grand-Popo" loading="lazy"><figcaption><strong>Grand-Popo</strong>Cocotiers, lagune et Bouche du Roy</figcaption></figure>
-        <figure class="mosaic__item ph"><img data-photo="dantokpa" alt="Paniers et ustensiles en bois au marché Dantokpa" loading="lazy"><figcaption><strong>Cotonou</strong>Le grand marché Dantokpa</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- COMPOSER -->
-    <section class="section" id="composer">
-      <div class="section__head section__head--center">
-        <p class="eyebrow">Sur mesure</p>
-        <h2 class="section__title">Composez <em>votre</em> coffret</h2>
-        <p class="section__sub">Pour un mariage, une entreprise, une diaspora qui a le mal du pays : nous créons des coffrets uniques.</p>
-      </div>
-      <ol class="steps">
-        <li><span class="steps__n">I</span><h3>Choisissez l’écrin</h3><p>Coffret vert et or, malle en bois sculpté ou panier tressé, habillé de pagne wax.</p></li>
-        <li><span class="steps__n">II</span><h3>Sélectionnez les trésors</h3><p>Beauté, épicerie fine, artisanat : piochez parmi plus de 60 pièces.</p></li>
-        <li><span class="steps__n">III</span><h3>Ajoutez vos mots</h3><p>Carte calligraphiée, en français, en fon ou en yoruba.</p></li>
-      </ol>
-      <div class="center"><a class="btn btn--green" href="#newsletter">Demander un devis</a></div>
-    </section>
-
-    <!-- AVIS -->
-    <section class="section section--tint" aria-label="Avis clients">
-      <div class="section__head section__head--center">
-        <p class="eyebrow">Ils ont offert le Bénin</p>
-      </div>
-      <div class="reviews">
-        <figure class="review"><blockquote>« Ma mère a pleuré en ouvrant le coffret : l’odeur du kinkéliba, c’était sa maison. »</blockquote><figcaption>Fifamè, Lyon</figcaption></figure>
-        <figure class="review"><blockquote>« Enfin un cadeau africain qui fait chic. L’écrin est magnifique, rien à voir avec des souvenirs. »</blockquote><figcaption>Claire, Paris</figcaption></figure>
-        <figure class="review"><blockquote>« Nous avons offert 120 coffrets à nos partenaires. Tout le monde nous en parle encore. »</blockquote><figcaption>Serge, Cotonou</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- NEWSLETTER -->
-    <section class="newsletter" id="newsletter">
-      <div class="newsletter__scene" id="nlScene" aria-hidden="true"></div>
-      <div class="newsletter__content">
-        <span class="hero__emblem" data-emblem="44"></span>
-        <h2 class="section__title">Recevez un peu <em>de soleil</em></h2>
-        <p>Nouveaux coffrets, portraits d’artisans et accès en avant-première aux éditions limitées.</p>
-        <form class="nl-form" id="nlForm">
-          <label class="sr-only" for="nlEmail">Votre e-mail</label>
-          <input type="email" id="nlEmail" placeholder="Votre adresse e-mail" required>
-          <button class="btn btn--green" type="submit">S’inscrire</button>
-        </form>
+      <div class="trust__item">
+        <svg class="trust__ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 27S5 20.5 5 12.5A6 6 0 0116 9a6 6 0 0111 3.5C27 20.5 16 27 16 27z"/></svg>
+        <p><strong>Une marque engagée</strong>Pour les artisans et producteurs locaux</p>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wax-strip" aria-hidden="true"></div>
+  <footer class="footer" id="a-propos">
     <div class="footer__grid">
-      <div class="footer__brand">
-        <span class="footer__emblem" data-emblem="40"></span>
-        <span class="logo__text logo__text--light">Cotonou Box</span>
-        <p>Le Bénin en cadeau.<br>Atelier à Cotonou · Haie Vive</p>
+      <div class="footer__about">
+        <a class="logo logo--light" href="#top" aria-label="Cotonou Box, accueil">
+          <svg class="logo__emblem" aria-hidden="true"><use href="#emblem"/></svg>
+          <span class="logo__name">Cotonou Box</span>
+          <span class="logo__tag">Le Bénin en cadeau</span>
+        </a>
+        <p>Cotonou Box réunit le meilleur des artisans, des coopératives de femmes et des petits producteurs du Bénin dans des coffrets composés à la main à Cotonou. Pour offrir le Bénin à ceux qu’on aime, d’ici ou d’ailleurs.</p>
       </div>
       <div>
-        <h4>Coffrets</h4>
+        <h3>Collections</h3>
         <ul id="footerCats"></ul>
       </div>
       <div>
-        <h4>La maison</h4>
+        <h3>Service client</h3>
         <ul>
-          <li><a href="#maison">Notre histoire</a></li>
-          <li><a href="#carnet">Nos artisans</a></li>
-          <li><a href="#composer">Coffrets entreprises</a></li>
-          <li><a href="#app">L’application</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Service</h4>
-        <ul>
-          <li>Livraison Cotonou 24 h</li>
-          <li>Afrique de l’Ouest 3–5 jours</li>
-          <li>Europe 4–7 jours</li>
-          <li>Paiement carte &amp; Mobile Money</li>
+          <li>Livraison à Cotonou en 24 h</li>
+          <li>Partout au Bénin en 2 à 4 jours</li>
+          <li>Commande depuis la France et l’étranger</li>
+          <li>Carte cadeau personnalisée</li>
         </ul>
       </div>
     </div>
-    <div class="footer__bottom">
-      <p>© 2026 Cotonou Box — Le Bénin en cadeau ♡</p>
-      <details class="credits">
-        <summary>Crédits photos</summary>
-        <ul id="credits"></ul>
-      </details>
-    </div>
+    <p class="footer__bottom">© 2026 Cotonou Box — Le Bénin en cadeau ♡</p>
   </footer>
+
+  <button class="chat" id="chatBtn" aria-label="Nous écrire">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 4c4.7 0 8.5 3.1 8.5 7s-3.8 7-8.5 7c-1 0-2-.1-2.9-.4L4.5 19.5l1.2-3.6C4.3 14.6 3.5 12.9 3.5 11 3.5 7.1 7.3 4 12 4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  </button>
 
   <!-- Fiche produit -->
   <div class="modal" id="productModal" aria-hidden="true">
     <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
       <button class="icon-btn modal__close" data-close aria-label="Fermer">✕</button>
-      <div class="modal__media art" id="pmArt"></div>
+      <img class="modal__img" id="pmImg" alt="">
       <div class="modal__body">
-        <p class="eyebrow" id="pmCats"></p>
         <h3 class="modal__title" id="pmTitle"></h3>
-        <p class="modal__rating">★★★★★ <span id="pmReviews"></span></p>
+        <p class="stars" id="pmStars"></p>
         <p class="modal__price" id="pmPrice"></p>
         <p id="pmDesc"></p>
-        <h4 class="modal__h">Ce coffret contient</h4>
+        <h4 class="modal__h">Ce coffret contient :</h4>
         <ul class="contents" id="pmContents"></ul>
-        <p class="origin" id="pmOrigin"></p>
-        <button class="btn btn--green btn--block" id="pmAdd">Ajouter au panier</button>
+        <button class="btn btn--green btn--block" id="pmAdd">Ajouter au panier <svg class="ico ico--sm"><use href="#i-cart"/></svg></button>
       </div>
     </div>
   </div>
 
   <!-- Panier -->
   <div class="drawer drawer--right" id="cartDrawer" aria-hidden="true">
-    <div class="drawer__panel" role="dialog" aria-label="Panier">
+    <div class="drawer__panel" role="dialog" aria-label="Mon panier">
       <div class="drawer__head">
         <span class="eyebrow">Mon panier</span>
         <button class="icon-btn" data-close aria-label="Fermer">✕</button>
       </div>
       <div class="cart" id="cartBody"></div>
       <div class="cart__foot" id="cartFoot">
-        <div class="cart__ship" id="cartShip"></div>
-        <div class="cart__total"><span>Total</span><strong id="cartTotal"></strong></div>
-        <label class="gift"><input type="checkbox" id="giftNote"> Ajouter une carte écrite à la main (offerte)</label>
+        <div class="cart__row"><span>Frais de livraison</span><span id="cartShip"></span></div>
+        <div class="cart__row cart__row--total"><span>Total</span><strong id="cartTotal"></strong></div>
         <button class="btn btn--green btn--block" id="checkoutBtn">Passer la commande</button>
         <p class="pay">Paiement sécurisé · Visa · Mastercard · Mobile Money</p>
       </div>
@@ -354,7 +213,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="art.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

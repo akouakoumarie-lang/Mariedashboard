@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:GV;src:url(fonts/GreatVibes-Regular.ttf)}
+@font-face{font-family:CG;font-weight:300 700;src:url(fonts/Cormorant.ttf)}
+@font-face{font-family:IS;font-style:italic;src:url(fonts/InstrumentSerif-Italic.ttf)}
+@font-face{font-family:SANS;src:url(fonts/InstrumentSans-Regular.ttf)}
+:root{--gold:#cdb27a;--gold2:rgba(205,178,122,.55);--gold3:rgba(205,178,122,.28);--champ:#efe2c6;--iv:#f5ede2}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1000px;height:1414px}
+.p{position:relative;width:1000px;height:1414px;overflow:hidden;color:var(--iv);text-align:center;
+ background:radial-gradient(70% 50% at 50% 45%,#5b1a2d 0%,#4a1424 55%,#350d19 100%)}
+.f1{position:absolute;inset:30px;border:1px solid var(--gold2)}.f2{position:absolute;inset:37px;border:1px solid var(--gold3)}
+.brand{position:absolute;top:92px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px}
+.brand svg{width:34px;height:34px;fill:var(--gold)}
+.brand span{font:500 16px/1 CG;letter-spacing:.36em;padding-left:.36em}
+.kicker{position:absolute;top:186px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:18px;font:12px/1 SANS;letter-spacing:.42em;text-transform:uppercase;color:var(--gold)}
+.kicker i{width:60px;height:1px;background:var(--gold2)}
+.t1{position:absolute;top:212px;left:0;right:0;font:400 136px/1.1 GV;color:var(--champ)}
+.t2{position:absolute;top:366px;left:0;right:0;font:500 36px/1 CG;letter-spacing:.38em;padding-left:.38em}
+.grid{position:absolute;top:452px;left:50%;transform:translateX(-50%)}
+.lead{position:absolute;top:884px;left:200px;right:200px;font:italic 25px/1.4 IS;color:rgba(245,237,226,.92)}
+.brands{position:absolute;top:986px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:20px;font:600 16px/1 CG;letter-spacing:.2em;color:var(--gold)}
+.brands i{width:5px;height:5px;background:var(--gold);transform:rotate(45deg)}
+.rule{position:absolute;top:1030px;left:50%;width:60px;margin-left:-30px;height:1px;background:var(--gold2)}
+.price{position:absolute;top:1052px;left:0;right:0;font:500 52px/1 CG;font-variant-numeric:lining-nums;color:var(--champ)}
+.price span{font:13px/1 SANS;letter-spacing:.32em;color:var(--gold);margin-left:10px;vertical-align:10px}
+.cta{position:absolute;top:1146px;left:50%;transform:translateX(-50%);display:inline-flex;flex-direction:column;gap:9px;padding:18px 40px;border:1px solid var(--gold2);white-space:nowrap}
+.cta b{font:400 12px/1 SANS;letter-spacing:.34em;text-transform:uppercase;color:var(--gold)}
+.cta span{font:500 26px/1 CG;font-variant-numeric:lining-nums;letter-spacing:.08em;color:var(--iv)}
+.foot{position:absolute;bottom:68px;left:0;right:0;font:italic 18px/1 IS;color:rgba(239,226,198,.75)}
+</style></head><body><div class="p">
+<div class="f1"></div><div class="f2"></div>
+<div class="brand"><svg viewBox="0 0 60 60"><path d="M30 4C37 13 37 24 30 31 23 24 23 13 30 4Z"/><path d="M29 31C21 30 13 22 11 11 21 12 28 21 29 31Z"/><path d="M31 31C39 30 47 22 49 11 39 12 32 21 31 31Z"/><path d="M29 37C21 40 11 38 5 29 15 26 24 30 29 37Z"/><path d="M31 37C39 40 49 38 55 29 45 26 36 30 31 37Z"/><path d="M28.6 30h2.8v24h-2.8z"/><path d="M30 54c-4-5-9-6-13-4 4 3 9 4 13 4zm0 0c4-5 9-6 13-4-4 3-9 4-13 4z"/></svg><span>COTONOU BOX</span></div>
+<p class="kicker"><i></i>Noël 2026<i></i></p>
+<div class="t1">Calendrier</div>
+<div class="t2">DE L’AVENT</div>
+<svg class="grid" viewBox="0 0 598 394" width="598" height="394"><defs>      <pattern id="wA" width="28" height="28" patternUnits="userSpaceOnUse">
+        <rect width="28" height="28" fill="#b3312a"/>
+        <circle cx="14" cy="14" r="8" fill="#e7b23c"/><circle cx="14" cy="14" r="4.5" fill="#1a5c3e"/><circle cx="14" cy="14" r="1.8" fill="#f6e7c7"/>
+        <path d="M0 0l5 0-5 5zM28 0v5l-5-5zM0 28v-5l5 5zM28 28h-5l5-5z" fill="#1a5c3e"/>
+        <circle cx="0" cy="14" r="2" fill="#f6e7c7"/><circle cx="28" cy="14" r="2" fill="#f6e7c7"/><circle cx="14" cy="0" r="2" fill="#f6e7c7"/><circle cx="14" cy="28" r="2" fill="#f6e7c7"/>
+      </pattern>
+      <pattern id="wB" width="24" height="24" patternUnits="userSpaceOnUse">
+        <rect width="24" height="24" fill="#0f3b2e"/>
+        <path d="M12 2l10 10-10 10L2 12z" fill="none" stroke="#d8b86a" stroke-width="1.6"/>
+        <path d="M12 7l5 5-5 5-5-5z" fill="#c4563a"/><circle cx="12" cy="12" r="1.6" fill="#f2dfae"/>
+      </pattern>
+      <pattern id="wC" width="22" height="22" patternUnits="userSpaceOnUse">
+        <rect width="22" height="22" fill="#e9b53e"/>
+        <ellipse cx="11" cy="11" rx="4" ry="8" fill="#b3312a" transform="rotate(45 11 11)"/>
+        <ellipse cx="11" cy="11" rx="1.8" ry="5" fill="#1a5c3e" transform="rotate(45 11 11)"/>
+        <circle cx="0" cy="0" r="3" fill="#1a5c3e"/><circle cx="22" cy="0" r="3" fill="#1a5c3e"/><circle cx="0" cy="22" r="3" fill="#1a5c3e"/><circle cx="22" cy="22" r="3" fill="#1a5c3e"/>
+      </pattern>
+      <pattern id="wD" width="30" height="30" patternUnits="userSpaceOnUse">
+        <rect width="30" height="30" fill="#1d3d6b"/>
+        <circle cx="15" cy="15" r="10" fill="none" stroke="#e7b23c" stroke-width="3"/><circle cx="15" cy="15" r="4" fill="#d9573c"/>
+        <circle cx="0" cy="0" r="5" fill="#d9573c"/><circle cx="30" cy="0" r="5" fill="#d9573c"/><circle cx="0" cy="30" r="5" fill="#d9573c"/><circle cx="30" cy="30" r="5" fill="#d9573c"/>
+      </pattern>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1dca4"/><stop offset=".5" stop-color="#cdb27a"/><stop offset="1" stop-color="#9b7a3a"/></linearGradient></defs><rect x="0.5" y="0.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="44.0" y="55.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">7</text><rect x="102" y="0" width="88" height="88" fill="url(#wA)"/><rect x="102.5" y="0.5" width="87" height="87" fill="none" stroke="#cdb27a" stroke-opacity=".7"/><circle cx="146.0" cy="44.0" r="23" fill="#4a1424"/><text style="font-variant-numeric:lining-nums" x="146.0" y="53.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="26" fill="#efe2c6">14</text><rect x="204.5" y="0.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="248.0" y="55.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">3</text><rect x="306.5" y="0.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="350.0" y="55.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">21</text><rect x="408.5" y="0.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="452.0" y="55.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">10</text><rect x="510.5" y="0.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="554.0" y="55.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">18</text><rect x="0.5" y="102.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="44.0" y="157.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">1</text><rect x="102.5" y="102.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="146.0" y="157.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">16</text><rect x="204.5" y="102.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="248.0" y="157.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">23</text><rect x="306.5" y="102.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="350.0" y="157.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">5</text><rect x="408" y="102" width="88" height="88" fill="url(#wC)"/><rect x="408.5" y="102.5" width="87" height="87" fill="none" stroke="#cdb27a" stroke-opacity=".7"/><circle cx="452.0" cy="146.0" r="23" fill="#4a1424"/><text style="font-variant-numeric:lining-nums" x="452.0" y="155.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="26" fill="#efe2c6">12</text><rect x="510.5" y="102.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="554.0" y="157.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">8</text><rect x="0.5" y="204.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="44.0" y="259.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">20</text><rect x="102.5" y="204.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="146.0" y="259.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">11</text><rect x="204" y="204" width="88" height="88" fill="url(#wB)"/><rect x="204.5" y="204.5" width="87" height="87" fill="none" stroke="#cdb27a" stroke-opacity=".7"/><circle cx="248.0" cy="248.0" r="23" fill="#4a1424"/><text style="font-variant-numeric:lining-nums" x="248.0" y="257.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="26" fill="#efe2c6">2</text><rect x="306.5" y="204.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="350.0" y="259.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">15</text><rect x="408.5" y="204.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="452.0" y="259.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">22</text><rect x="510.5" y="204.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="554.0" y="259.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">6</text><rect x="0" y="306" width="88" height="88" fill="url(#wD)"/><rect x="0.5" y="306.5" width="87" height="87" fill="none" stroke="#cdb27a" stroke-opacity=".7"/><circle cx="44.0" cy="350.0" r="23" fill="#4a1424"/><text style="font-variant-numeric:lining-nums" x="44.0" y="359.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="26" fill="#efe2c6">9</text><rect x="102.5" y="306.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="146.0" y="361.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">19</text><rect x="204.5" y="306.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="248.0" y="361.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">13</text><rect x="306.5" y="306.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="350.0" y="361.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">4</text><rect x="408.5" y="306.5" width="87" height="87" fill="rgba(205,178,122,.04)" stroke="#cdb27a" stroke-opacity=".55"/><text style="font-variant-numeric:lining-nums" x="452.0" y="361.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="32" fill="#efe2c6">17</text><rect x="510" y="306" width="88" height="88" fill="url(#gold)"/><text style="font-variant-numeric:lining-nums" x="554.0" y="364.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="40" fill="#4a1424">24</text></svg>
+<p class="lead">Vingt-quatre jours de trésors du Bénin et de soins de grandes maisons, à ouvrir jusqu’à Noël.</p>
+<p class="brands">RITUALS<i></i>YVES ROCHER<i></i>SEPHORA</p>
+<div class="rule"></div>
+<p class="price">45 000<span>FCFA</span></p>
+<div class="cta"><b>Réservez le vôtre sur WhatsApp</b><span>+229 01 97 17 64 59</span></div>
+<p class="foot">Le design du calendrier sera dévoilé très bientôt.</p>
+</div></body></html>

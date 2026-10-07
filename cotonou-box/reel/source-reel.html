@@ -1,0 +1,164 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:GV;src:url(fonts/GreatVibes-Regular.ttf)}
+@font-face{font-family:CG;font-weight:300 700;src:url(fonts/Cormorant.ttf)}
+@font-face{font-family:IS;font-style:italic;src:url(fonts/InstrumentSerif-Italic.ttf)}
+@font-face{font-family:SANS;src:url(fonts/InstrumentSans-Regular.ttf)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;background:#350d19;overflow:hidden}
+#s{position:relative;width:1080px;height:1920px;overflow:hidden;color:#f5ede2;text-align:center}
+#bg{position:absolute;inset:-10%;background:radial-gradient(60% 45% at 50% 46%,#5f1c30 0%,#4a1424 52%,#300b16 100%)}
+#dust{position:absolute;inset:0}
+#frame{position:absolute;inset:0}
+.a{position:absolute;left:0;right:0;opacity:0;will-change:transform,opacity}
+#emb{top:206px} #emb svg{width:64px;height:64px;fill:#cdb27a}
+#brand{top:290px;font:500 24px/1 CG;letter-spacing:.36em;padding-left:.36em}
+#kick{top:362px;display:flex;justify-content:center;align-items:center;gap:22px;font:16px/1 SANS;letter-spacing:.42em;text-transform:uppercase;color:#cdb27a}
+#kick i{width:80px;height:1px;background:rgba(205,178,122,.55)}
+#t1{top:388px;font:400 178px/1.1 GV;color:#efe2c6}
+#t2{top:592px;font:500 46px/1 CG;letter-spacing:.38em;padding-left:.38em}
+#grid{position:absolute;top:688px;left:50%;margin-left:-400.0px;overflow:visible}
+#lead{top:1262px;left:120px;right:120px;font:italic 34px/1.38 IS;color:rgba(245,237,226,.94)}
+#brands{top:1378px;display:flex;justify-content:center;align-items:center;gap:26px;font:600 22px/1 CG;letter-spacing:.2em;color:#cdb27a}
+#brands span{opacity:0;display:inline-block}
+#brands i{width:6px;height:6px;background:#cdb27a;transform:rotate(45deg);opacity:0}
+#rule{top:1430px;left:50%;right:auto;width:80px;margin-left:-40px;height:1px;background:rgba(205,178,122,.6)}
+#price{top:1452px;font:500 72px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}
+#price span{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}
+#cta{top:1562px;left:50%;right:auto;transform:translateX(-50%);width:640px;padding:24px 0 22px}
+#ctab{position:absolute;inset:0;overflow:visible}
+#cta b{display:block;font:400 16px/1 SANS;letter-spacing:.34em;text-transform:uppercase;color:#cdb27a}
+#cta span{display:block;margin-top:12px;font:500 38px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}
+#foot{top:1700px;font:italic 26px/1 IS;color:rgba(239,226,198,.8)}
+</style></head><body><div id="s">
+<div id="bg"></div><canvas id="dust" width="1080" height="1920"></canvas>
+<svg id="frame" viewBox="0 0 1080 1920"><rect id="fr1" x="40" y="40" width="1000" height="1840" fill="none" stroke="#cdb27a" stroke-opacity=".6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/><rect id="fr2" x="49" y="49" width="982" height="1822" fill="none" stroke="#cdb27a" stroke-opacity=".3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
+<div class="a" id="emb"><svg viewBox="0 0 60 60"><path d="M30 4C37 13 37 24 30 31 23 24 23 13 30 4Z"/><path d="M29 31C21 30 13 22 11 11 21 12 28 21 29 31Z"/><path d="M31 31C39 30 47 22 49 11 39 12 32 21 31 31Z"/><path d="M29 37C21 40 11 38 5 29 15 26 24 30 29 37Z"/><path d="M31 37C39 40 49 38 55 29 45 26 36 30 31 37Z"/><path d="M28.6 30h2.8v24h-2.8z"/><path d="M30 54c-4-5-9-6-13-4 4 3 9 4 13 4zm0 0c4-5 9-6 13-4-4 3-9 4-13 4z"/></svg></div>
+<div class="a" id="brand">COTONOU BOX</div>
+<div class="a" id="kick"><i></i>Noël 2026<i></i></div>
+<div class="a" id="t1">Calendrier</div>
+<div class="a" id="t2">DE L’AVENT</div>
+<svg id="grid" viewBox="0 0 800 528" width="800" height="528"><defs>      <pattern id="wA" width="28" height="28" patternUnits="userSpaceOnUse">
+        <rect width="28" height="28" fill="#b3312a"/>
+        <circle cx="14" cy="14" r="8" fill="#e7b23c"/><circle cx="14" cy="14" r="4.5" fill="#1a5c3e"/><circle cx="14" cy="14" r="1.8" fill="#f6e7c7"/>
+        <path d="M0 0l5 0-5 5zM28 0v5l-5-5zM0 28v-5l5 5zM28 28h-5l5-5z" fill="#1a5c3e"/>
+        <circle cx="0" cy="14" r="2" fill="#f6e7c7"/><circle cx="28" cy="14" r="2" fill="#f6e7c7"/><circle cx="14" cy="0" r="2" fill="#f6e7c7"/><circle cx="14" cy="28" r="2" fill="#f6e7c7"/>
+      </pattern>
+      <pattern id="wB" width="24" height="24" patternUnits="userSpaceOnUse">
+        <rect width="24" height="24" fill="#0f3b2e"/>
+        <path d="M12 2l10 10-10 10L2 12z" fill="none" stroke="#d8b86a" stroke-width="1.6"/>
+        <path d="M12 7l5 5-5 5-5-5z" fill="#c4563a"/><circle cx="12" cy="12" r="1.6" fill="#f2dfae"/>
+      </pattern>
+      <pattern id="wC" width="22" height="22" patternUnits="userSpaceOnUse">
+        <rect width="22" height="22" fill="#e9b53e"/>
+        <ellipse cx="11" cy="11" rx="4" ry="8" fill="#b3312a" transform="rotate(45 11 11)"/>
+        <ellipse cx="11" cy="11" rx="1.8" ry="5" fill="#1a5c3e" transform="rotate(45 11 11)"/>
+        <circle cx="0" cy="0" r="3" fill="#1a5c3e"/><circle cx="22" cy="0" r="3" fill="#1a5c3e"/><circle cx="0" cy="22" r="3" fill="#1a5c3e"/><circle cx="22" cy="22" r="3" fill="#1a5c3e"/>
+      </pattern>
+      <pattern id="wD" width="30" height="30" patternUnits="userSpaceOnUse">
+        <rect width="30" height="30" fill="#1d3d6b"/>
+        <circle cx="15" cy="15" r="10" fill="none" stroke="#e7b23c" stroke-width="3"/><circle cx="15" cy="15" r="4" fill="#d9573c"/>
+        <circle cx="0" cy="0" r="5" fill="#d9573c"/><circle cx="30" cy="0" r="5" fill="#d9573c"/><circle cx="0" cy="30" r="5" fill="#d9573c"/><circle cx="30" cy="30" r="5" fill="#d9573c"/>
+      </pattern>
+
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1dca4"/><stop offset=".5" stop-color="#cdb27a"/><stop offset="1" stop-color="#9b7a3a"/></linearGradient>
+<linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop id="sh0" offset="0" stop-color="#fff" stop-opacity="0"/><stop id="sh1" offset=".5" stop-color="#fff" stop-opacity=".55"/><stop id="sh2" offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs><g class="cell" data-i="0" data-k="plain" style="transform-origin:60.0px 60.0px;opacity:0">
+<rect x="0.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="60.0" y="75.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">7</text></g><g class="cell" data-i="1" data-k="wax" style="transform-origin:196.0px 60.0px;opacity:0">
+<rect x="136.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/><rect class="wx" x="136" y="0" width="120" height="120" fill="url(#wA)" opacity="0"/><circle class="wx" cx="196.0" cy="60.0" r="31" fill="#4a1424" opacity="0"/>
+<text x="196.0" y="72.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="34" fill="#efe2c6" style="font-variant-numeric:lining-nums">14</text></g><g class="cell" data-i="2" data-k="plain" style="transform-origin:332.0px 60.0px;opacity:0">
+<rect x="272.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="332.0" y="75.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">3</text></g><g class="cell" data-i="3" data-k="plain" style="transform-origin:468.0px 60.0px;opacity:0">
+<rect x="408.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="468.0" y="75.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">21</text></g><g class="cell" data-i="4" data-k="plain" style="transform-origin:604.0px 60.0px;opacity:0">
+<rect x="544.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="604.0" y="75.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">10</text></g><g class="cell" data-i="5" data-k="plain" style="transform-origin:740.0px 60.0px;opacity:0">
+<rect x="680.5" y="0.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="740.0" y="75.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">18</text></g><g class="cell" data-i="6" data-k="plain" style="transform-origin:60.0px 196.0px;opacity:0">
+<rect x="0.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="60.0" y="211.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">1</text></g><g class="cell" data-i="7" data-k="plain" style="transform-origin:196.0px 196.0px;opacity:0">
+<rect x="136.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="196.0" y="211.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">16</text></g><g class="cell" data-i="8" data-k="plain" style="transform-origin:332.0px 196.0px;opacity:0">
+<rect x="272.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="332.0" y="211.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">23</text></g><g class="cell" data-i="9" data-k="plain" style="transform-origin:468.0px 196.0px;opacity:0">
+<rect x="408.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="468.0" y="211.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">5</text></g><g class="cell" data-i="10" data-k="wax" style="transform-origin:604.0px 196.0px;opacity:0">
+<rect x="544.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/><rect class="wx" x="544" y="136" width="120" height="120" fill="url(#wC)" opacity="0"/><circle class="wx" cx="604.0" cy="196.0" r="31" fill="#4a1424" opacity="0"/>
+<text x="604.0" y="208.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="34" fill="#efe2c6" style="font-variant-numeric:lining-nums">12</text></g><g class="cell" data-i="11" data-k="plain" style="transform-origin:740.0px 196.0px;opacity:0">
+<rect x="680.5" y="136.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="740.0" y="211.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">8</text></g><g class="cell" data-i="12" data-k="plain" style="transform-origin:60.0px 332.0px;opacity:0">
+<rect x="0.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="60.0" y="347.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">20</text></g><g class="cell" data-i="13" data-k="plain" style="transform-origin:196.0px 332.0px;opacity:0">
+<rect x="136.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="196.0" y="347.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">11</text></g><g class="cell" data-i="14" data-k="wax" style="transform-origin:332.0px 332.0px;opacity:0">
+<rect x="272.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/><rect class="wx" x="272" y="272" width="120" height="120" fill="url(#wB)" opacity="0"/><circle class="wx" cx="332.0" cy="332.0" r="31" fill="#4a1424" opacity="0"/>
+<text x="332.0" y="344.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="34" fill="#efe2c6" style="font-variant-numeric:lining-nums">2</text></g><g class="cell" data-i="15" data-k="plain" style="transform-origin:468.0px 332.0px;opacity:0">
+<rect x="408.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="468.0" y="347.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">15</text></g><g class="cell" data-i="16" data-k="plain" style="transform-origin:604.0px 332.0px;opacity:0">
+<rect x="544.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="604.0" y="347.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">22</text></g><g class="cell" data-i="17" data-k="plain" style="transform-origin:740.0px 332.0px;opacity:0">
+<rect x="680.5" y="272.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="740.0" y="347.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">6</text></g><g class="cell" data-i="18" data-k="wax" style="transform-origin:60.0px 468.0px;opacity:0">
+<rect x="0.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/><rect class="wx" x="0" y="408" width="120" height="120" fill="url(#wD)" opacity="0"/><circle class="wx" cx="60.0" cy="468.0" r="31" fill="#4a1424" opacity="0"/>
+<text x="60.0" y="480.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="34" fill="#efe2c6" style="font-variant-numeric:lining-nums">9</text></g><g class="cell" data-i="19" data-k="plain" style="transform-origin:196.0px 468.0px;opacity:0">
+<rect x="136.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="196.0" y="483.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">19</text></g><g class="cell" data-i="20" data-k="plain" style="transform-origin:332.0px 468.0px;opacity:0">
+<rect x="272.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="332.0" y="483.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">13</text></g><g class="cell" data-i="21" data-k="plain" style="transform-origin:468.0px 468.0px;opacity:0">
+<rect x="408.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="468.0" y="483.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">4</text></g><g class="cell" data-i="22" data-k="plain" style="transform-origin:604.0px 468.0px;opacity:0">
+<rect x="544.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/>
+<text x="604.0" y="483.0" text-anchor="middle" font-family="CG" font-weight="400" font-size="42" fill="#efe2c6" style="font-variant-numeric:lining-nums">17</text></g><g class="cell" data-i="23" data-k="gold" style="transform-origin:740.0px 468.0px;opacity:0">
+<rect x="680.5" y="408.5" width="119" height="119" fill="rgba(205,178,122,.05)" stroke="#cdb27a" stroke-opacity=".6"/><rect class="gd" x="680" y="408" width="120" height="120" fill="url(#gold)" opacity="0"/><rect class="sh" x="680" y="408" width="120" height="120" fill="url(#shine)" opacity="0"/>
+<text x="740.0" y="483.0" text-anchor="middle" font-family="CG" font-weight="500" font-size="54" fill="#efe2c6" style="font-variant-numeric:lining-nums">24</text></g></svg>
+<p class="a" id="lead">Vingt-quatre jours de trésors du Bénin et de soins de grandes maisons, à ouvrir jusqu’à Noël.</p>
+<p class="a" id="brands" style="opacity:1"><span>RITUALS</span><i></i><span>YVES ROCHER</span><i></i><span>SEPHORA</span></p>
+<div class="a" id="rule"></div>
+<p class="a" id="price">45 000<span>FCFA</span></p>
+<div class="a" id="cta"><svg id="ctab" viewBox="0 0 640 112" preserveAspectRatio="none"><rect x=".5" y=".5" width="639" height="111" fill="none" stroke="#cdb27a" stroke-opacity=".6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" id="ctar"/></svg><b>Réservez le vôtre sur WhatsApp</b><span>+229 01 97 17 64 59</span></div>
+<p class="a" id="foot">Le design sera dévoilé très bientôt.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cl=(x)=>Math.max(0,Math.min(1,x));
+const p=(t,a,b)=>cl((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3);
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+function fade(el,t,a,b,dy=24){const k=eo(p(t,a,b));el.style.opacity=k;el.style.transform=(el.id==='cta'?'translateX(-50%) ':'')+`translateY(${(1-k)*dy}px)`;}
+// poussière dorée déterministe
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const P=Array.from({length:46},()=>({x:rnd()*1080,y:rnd()*1920,r:.8+rnd()*2.2,v:12+rnd()*28,ph:rnd()*6.28,a:.15+rnd()*.4}));
+const ctx=$('dust').getContext('2d');
+const order=[7, 14, 3, 21, 10, 18, 1, 16, 23, 5, 12, 8, 20, 11, 2, 15, 22, 6, 9, 19, 13, 4, 17, 24];
+const rank=[...order.keys()].sort((a,b)=>((a*7)%24)-((b*7)%24));
+const appear={};rank.forEach((ci,k)=>appear[ci]=4.3+k*0.115);
+window.setT=function(t){
+ $('bg').style.transform=`scale(${1+0.04*Math.sin(t/16*Math.PI)})`;
+ ctx.clearRect(0,0,1080,1920);
+ for(const q of P){const y=((q.y-q.v*t)%1920+1920)%1920;const tw=.5+.5*Math.sin(q.ph+t*1.6);ctx.fillStyle=`rgba(225,196,130,${q.a*tw*cl(t/1.5)})`;ctx.beginPath();ctx.arc(q.x+Math.sin(q.ph+t*.5)*8,y,q.r,0,6.283);ctx.fill();}
+ $('fr1').style.strokeDashoffset=1-eio(p(t,0,1.5));
+ $('fr2').style.strokeDashoffset=1-eio(p(t,.25,1.8));
+ fade($('emb'),t,.5,1.4,16);
+ const kb=eo(p(t,1.0,2.0));$('brand').style.opacity=kb;$('brand').style.letterSpacing=(0.8-0.44*kb)+'em';
+ fade($('kick'),t,1.8,2.5,10);
+ const kt=eio(p(t,2.2,3.5));$('t1').style.opacity=kt>0?1:0;$('t1').style.clipPath=`inset(0 ${(1-kt)*100}% 0 0)`;
+ const k2=eo(p(t,3.2,4.1));$('t2').style.opacity=k2;$('t2').style.letterSpacing=(0.7-0.32*k2)+'em';
+ document.querySelectorAll('.cell').forEach(g=>{const i=+g.dataset.i,k=g.dataset.k;const a=appear[i];const e=eo(p(t,a,a+.45));
+   g.style.opacity=e;g.style.transform=`scale(${.7+.3*e})`;
+   if(k==='wax')g.querySelectorAll('.wx').forEach(w=>w.setAttribute('opacity',eo(p(t,7.5,8.2))));
+   if(k==='gold'){const kg=eo(p(t,8.0,8.7));g.querySelector('.gd').setAttribute('opacity',kg);const tx=g.querySelector('text');const mix=(a,b)=>Math.round(a+(b-a)*kg);tx.setAttribute('fill',`rgb(${mix(239,74)},${mix(226,20)},${mix(198,36)})`);const s=p(t,8.6,9.8);g.querySelector('.sh').setAttribute('opacity',s>0&&s<1?1:0);$('sh0').setAttribute('offset',Math.max(0,s*1.6-.6));$('sh1').setAttribute('offset',cl(s*1.6-.3));$('sh2').setAttribute('offset',cl(s*1.6));
+     const s2=p(t,13.6,14.8);if(s2>0&&s2<1){g.querySelector('.sh').setAttribute('opacity',1);$('sh0').setAttribute('offset',Math.max(0,s2*1.6-.6));$('sh1').setAttribute('offset',cl(s2*1.6-.3));$('sh2').setAttribute('offset',cl(s2*1.6));}
+     g.style.transform=`scale(${(.7+.3*e)*(1+0.06*Math.sin(Math.PI*p(t,8.0,8.9)))})`;}
+ });
+ fade($('lead'),t,9.0,10.0,20);
+ const bs=document.querySelectorAll('#brands span'),bi=document.querySelectorAll('#brands i');
+ bs.forEach((s,j)=>{const k=eo(p(t,10.0+j*.35,10.6+j*.35));s.style.opacity=k;s.style.transform=`translateY(${(1-k)*12}px)`;});
+ bi.forEach((s,j)=>{s.style.opacity=eo(p(t,10.3+j*.35,10.7+j*.35));});
+ const kr=eo(p(t,11.1,11.7));$('rule').style.opacity=kr;$('rule').style.transform=`scaleX(${kr})`;
+ fade($('price'),t,11.3,12.1,18);
+ const kc=eo(p(t,12.0,12.6));const c=$('cta');c.style.opacity=kc>0?1:0;c.style.transform='translateX(-50%)';
+ $('ctar').style.strokeDashoffset=1-eio(p(t,12.0,13.0));
+ c.querySelectorAll('b,span').forEach((el,j)=>{const k=eo(p(t,12.4+j*.25,13.1+j*.25));el.style.opacity=k;el.style.transform=`translateY(${(1-k)*10}px)`;});
+ fade($('foot'),t,13.4,14.2,10);
+};
+</script></body></html>

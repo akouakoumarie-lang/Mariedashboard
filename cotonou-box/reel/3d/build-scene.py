@@ -149,9 +149,11 @@ body.poster #sub{{display:block}}
 #t2{{top:var(--t2Y);font:500 var(--t2S)/1 CG;letter-spacing:.38em;padding-left:.38em}}
 #seal{{position:absolute;left:var(--sealX);top:var(--sealY);width:300px;height:300px;margin:-150px 0 0 -150px;opacity:0}}
 #lead{{top:var(--leadY);left:60px;right:60px;font:italic 40px/1.3 IS;color:rgba(245,237,226,.95)}}
-#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:18px;font:600 23px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
+#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:30px;font:600 23px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
 #brands span{{opacity:0;display:inline-block}}
 #brands i{{width:6px;height:6px;background:#cdb27a;transform:rotate(45deg);opacity:0}}
+#brands .lg{{display:block}}
+#brands .loreal{{font:600 27px/1 CG;letter-spacing:.14em;background:linear-gradient(180deg,#f6e3a8,#d6b46a 55%,#a8803a);-webkit-background-clip:text;background-clip:text;color:transparent}}
 #more{{top:var(--moY);font:italic 27px/1 IS;color:rgba(239,226,198,.85)}}
 #pay{{top:var(--payY);left:50%;right:auto;width:740px;margin-left:-370px}}
 .payin{{position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center;gap:22px;padding:18px 0 16px;background:linear-gradient(135deg,#f6e3a8 0%,#d4b06a 45%,#a8803a 100%);color:#3d0f1c;box-shadow:0 10px 30px rgba(0,0,0,.35)}}
@@ -169,13 +171,13 @@ body.poster #pay,body.poster #more{{display:none}}
 .fmt span{{display:block;margin-top:12px;font:italic 28px/1 IS;color:rgba(239,226,198,.9);font-variant-numeric:lining-nums}}
 #pay2{{top:1612px;left:50%;right:auto;width:740px;margin-left:-370px}}
 body.poster #mini,body.poster #minitag,body.poster .fmt,body.poster #pay2{{display:none}}
-#price{{top:var(--prY);font:500 76px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
+#price{{top:var(--prY);font:500 70px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 #price span{{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}}
 #cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
 #cta b{{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}}
 #cta span{{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
-body.reel{{--hookY:770px;--hookS:64px;--boxY:944px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:660px;--leadY:1392px;--brY:1452px;--moY:1494px;--prY:1538px;--payY:1632px;--ctaY:1722px}}
-body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:1016px;--prY:1056px;--ctaY:1160px}}
+body.reel{{--hookY:770px;--hookS:64px;--boxY:944px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:660px;--leadY:1382px;--brY:1436px;--moY:1512px;--prY:1550px;--payY:1636px;--ctaY:1718px}}
+body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:992px;--prY:1070px;--ctaY:1166px}}
 body.poster #lead{{display:none}}
 body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.poster #cta span{{font-size:38px}} body.poster #seal svg{{transform:scale(.86)}}
 </style></head><body class="MODE"><div id="s">
@@ -194,7 +196,7 @@ body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.
 <canvas id="fx"></canvas>
 <div id="seal">{seal}</div>
 <p class="t" id="lead">Trésors du Bénin &amp; soins de grandes maisons</p>
-<p class="t" id="brands"><span>RITUALS</span><i></i><span>YVES ROCHER</span><i></i><span>SEPHORA</span><i></i><span>L’ORÉAL</span></p>
+<p class="t" id="brands"><span><img class="lg" style="height:24px" src="file://{sp}/logos/rituals.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/yves-rocher.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/sephora.png"></span><i></i><span class="loreal">L’ORÉAL</span></p>
 <p class="t" id="more">et bien d’autres grandes maisons…</p>
 <p class="t" id="price">45 000<span>FCFA</span></p>
 <div class="t" id="pay"><div class="payin"><b>PAYABLE EN 2 FOIS</b><em>25 000 + 20 000 FCFA</em></div></div>

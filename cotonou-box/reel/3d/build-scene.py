@@ -159,6 +159,16 @@ body.poster #sub{{display:block}}
 .payin em{{font:600 30px/1 CG;font-style:normal;font-variant-numeric:lining-nums}}
 .payin::after{{content:"";position:absolute;top:0;bottom:0;width:120px;left:var(--shx,-160px);background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-18deg)}}
 body.poster #pay,body.poster #more{{display:none}}
+#mini{{position:absolute;left:520px;top:880px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}}
+#minitag{{position:absolute;left:660px;width:300px;top:828px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}}
+.fmt{{position:absolute;top:1400px;width:420px;opacity:0;text-align:center}}
+#f24{{left:120px}} #f12{{left:600px}}
+.fmt b{{display:block;font:600 26px/1 CG;letter-spacing:.3em;color:#cdb27a}}
+.fmt strong{{display:block;margin-top:14px;font:500 70px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
+.fmt strong small{{font:15px/1 SANS;letter-spacing:.3em;color:#cdb27a;vertical-align:14px}}
+.fmt span{{display:block;margin-top:12px;font:italic 28px/1 IS;color:rgba(239,226,198,.9);font-variant-numeric:lining-nums}}
+#pay2{{top:1612px;left:50%;right:auto;width:740px;margin-left:-370px}}
+body.poster #mini,body.poster #minitag,body.poster .fmt,body.poster #pay2{{display:none}}
 #price{{top:var(--prY);font:500 76px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 #price span{{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}}
 #cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
@@ -188,6 +198,11 @@ body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.
 <p class="t" id="more">et bien d’autres grandes maisons…</p>
 <p class="t" id="price">45 000<span>FCFA</span></p>
 <div class="t" id="pay"><div class="payin"><b>PAYABLE EN 2 FOIS</b><em>25 000 + 20 000 FCFA</em></div></div>
+<img id="mini" src="file://{sp}/v4/cal12.png">
+<p id="minitag">MINI</p>
+<div class="fmt" id="f24"><b>24 JOURS</b><strong>45 000 <small>FCFA</small></strong><span>ou 25 000 + 20 000</span></div>
+<div class="fmt" id="f12"><b>12 JOURS</b><strong>25 000 <small>FCFA</small></strong><span>ou 15 000 + 10 000</span></div>
+<div class="t" id="pay2"><div class="payin"><b>PAIEMENT EN 2 FOIS</b><em>sur les deux formats</em></div></div>
 <div class="t" id="cta"><b>Intéressé(e)&nbsp;? Écrivez-nous sur WhatsApp</b><span>+229 01 97 17 64 59</span></div>
 </div>
 <script>
@@ -222,7 +237,8 @@ window.setT=function(t){{
  ry+=1.2*Math.sin(t*.9);rx+=.6*Math.sin(t*.7+1);
  let shake=0;const si=p(t,12.55,13.3);if(si>0&&si<1)shake=(1-si)*9*Math.sin(si*60);
  const fl=6*Math.sin(t*1.3);
- $('cam').style.transform=`translate3d(${{shake}}px,${{(1-rise)*420+fl}}px,0) rotateX(${{rx}}deg) rotateY(${{ry}}deg) scale3d(var(--bs),var(--bs),var(--bs))`;
+ const mv=document.body.classList.contains('reel')?eio(p(t,18.0,19.1)):0;
+ $('cam').style.transform=`translate3d(${{shake-215*mv}}px,${{(1-rise)*420+fl+50*mv}}px,0) rotateX(${{rx}}deg) rotateY(${{ry+6*mv}}deg) scale3d(calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}))`;
  $('cam').style.opacity=cl(rise*1.4);
  $('ground').style.opacity=rise;
  // portes : vague d'ouverture
@@ -247,7 +263,7 @@ window.setT=function(t){{
  const k2=eo(p(t,3.8,4.6));$('t2').style.opacity=k2;$('t2').style.letterSpacing=(.7-.32*k2)+'em';
  // sceau
  const ks=p(t,12.0,12.6);const seal=$('seal');
- if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`scale(${{(2.3-1.3*Math.min(e,1.06))*1.12}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
+ if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`translate(${{-255*mv}}px,${{95*mv}}px) scale(${{(2.3-1.3*Math.min(e,1.06))*1.12*(1-.32*mv)}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
  txt('lead',t,13.2,14.1,18);
  const bs=document.querySelectorAll('#brands span'),bi=document.querySelectorAll('#brands i');
  bs.forEach((s,j)=>{{const k=eo(p(t,13.7+j*.25,14.3+j*.25));s.style.opacity=k;s.style.transform=`translateY(${{(1-k)*12}}px)`;}});
@@ -255,8 +271,14 @@ window.setT=function(t){{
  txt('more',t,14.9,15.6,10);
  txt('price',t,15.3,16.1,18);
  {{const e=$('pay'),k=p(t,16.1,16.7);e.style.opacity=cl(k*2.5);e.style.transform=`scale(${{k>0?(.6+.4*back(k)):.6}})`;e.querySelector('.payin').style.setProperty('--shx',(-160+1000*eio(p(t,16.9,17.8)))+'px');}}
- txt('cta',t,17.4,18.2,14);
- const pul=t>18.2?(.5+.5*Math.sin((t-18.2)*3.2)):0;$('cta').style.boxShadow=`0 0 ${{18+22*pul}}px rgba(231,200,120,${{.18+.25*pul}})`;
+ if(document.body.classList.contains('reel')){{
+   const out=1-eio(p(t,17.9,18.4));['lead','brands','more','price','pay'].forEach(id=>{{const e=$(id);e.style.opacity=(+getComputedStyle(e).opacity||0)*out;}});
+   const km=eo(p(t,18.5,19.3));$('mini').style.opacity=km;$('mini').style.transform=`translateY(${{(1-km)*60}}px) scale(${{.9+.1*km}})`;$('minitag').style.opacity=eo(p(t,19.0,19.6));
+   ['f24','f12'].forEach((id,j)=>{{const k=eo(p(t,19.3+j*.3,20.0+j*.3));$(id).style.opacity=k;$(id).style.transform=`translateY(${{(1-k)*18}}px)`;}});
+   const e2=$('pay2'),k2=p(t,20.3,20.9);e2.style.opacity=cl(k2*2.5);e2.style.transform=`scale(${{k2>0?(.6+.4*back(k2)):.6}})`;e2.querySelector('.payin').style.setProperty('--shx',(-160+1000*eio(p(t,21.0,21.9)))+'px');
+ }}
+ txt('cta',t,21.4,22.2,14);
+ const pul=t>22.2?(.5+.5*Math.sin((t-22.2)*3.2)):0;$('cta').style.boxShadow=`0 0 ${{18+22*pul}}px rgba(231,200,120,${{.18+.25*pul}})`;
  if(document.body.classList.contains('poster')){{$('sub').style.opacity=1;$('hook').style.opacity=0;
    [1,6,13].forEach((ix,j)=>{{const d=others[ix];const a=[96,78,104][j];d.style.transform=`rotateY(${{-a}}deg)`;d.querySelector('.df').style.filter=`brightness(${{1-.38*Math.sin(a*Math.PI/180)}})`;const c=d.parentElement;c.querySelector('.glow').style.opacity=1;c.querySelector('.ico').style.opacity=1;}});
    $('cta').style.boxShadow='0 0 26px rgba(231,200,120,.28)';}}

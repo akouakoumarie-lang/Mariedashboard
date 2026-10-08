@@ -22,6 +22,15 @@ order = [7,14,3,21, 10,18,1,16, 23,5,12,8, 20,11,2,15, 22,6,9,19, 13,4,17,24]
 waxmap = {14:'A', 5:'C', 2:'B', 19:'D'}
 solid = ['#efe6d4', '#b5553a', '#5a1a2b', '#efe6d4', '#14533f']
 doors = ''
+ICONS = [
+ '<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/>',
+ '<path d="M7 9h10v9a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3z"/><path d="M6 6h12v3H6z"/><path d="M10 13h4"/>',
+ '<path d="M5 19C5 10 11 5 19 4c0 9-5 14-14 15z"/><path d="M5 19l8-8"/>',
+ '<path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"/>',
+ '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+ '<rect x="4" y="10" width="16" height="10"/><path d="M3 7h18v3H3zM12 7v13M12 7c-1.5-4-6-4-5.5-1 .4 1.6 3.5 1 5.5 1zm0 0c1.5-4 6-4 5.5-1-.4 1.6-3.5 1-5.5 1z"/>',
+ '<path d="M10 3h4v3l2 2v12H8V8l2-2z"/><path d="M8 13h8"/>',
+]
 for i, n in enumerate(order):
     c, r = i % cols, i // cols
     x = PADX + c*(dw+GAP); y = PADT + r*(dh+GAP)
@@ -35,9 +44,11 @@ for i, n in enumerate(order):
         col = solid[(i*2 + r) % len(solid)]
         face = f'background:{col};'
         ink = '#14533f' if col == '#efe6d4' else '#e9d39b'
-    badge = f'<span class="num" style="color:{ink}">{n}</span>' if n not in waxmap else f'<span class="num wx">{n}</span>'
+    foil = (n != 24 and n not in waxmap and ink != '#14533f')
+    badge = (f'<span class="num foil">{n}</span>' if foil else f'<span class="num" style="color:{ink}">{n}</span>') if n not in waxmap else f'<span class="num wx">{n}</span>'
+    icon = ICONS[(i*3) % len(ICONS)] if n != 24 else ICONS[5]
     doors += (f'<div class="cell" style="left:{x:.1f}px;top:{y:.1f}px;width:{dw:.1f}px;height:{dh:.1f}px" data-n="{n}">'
-              f'<div class="glow"></div>'
+              f'<div class="glow"></div><svg class="ico" viewBox="0 0 24 24">{icon}</svg>'
               f'<div class="door" data-n="{n}"><div class="df" style="{face}">{badge}<i class="notch"></i></div><div class="db"></div></div></div>')
 
 # --- Sceau de cire (bord irrégulier) ---
@@ -80,6 +91,8 @@ seal = f'''<svg viewBox="0 0 300 300" width="300" height="300">
  <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#7a5718">SOON</text>
 </g></svg>'''
 
+GRAINSVG = urllib.parse.quote('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .4  0 0 0 0 .3  0 0 0 1.2 -.2"/></filter><rect width="160" height="160" filter="url(#n)"/></svg>')
+GRAINCSS = ":root{--grain:url('data:image/svg+xml," + GRAINSVG + "')}"
 html = f'''<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{{font-family:GV;src:url(file://{sp}/fonts/GreatVibes-Regular.ttf)}}
 @font-face{{font-family:CG;font-weight:300 700;src:url(file://{sp}/fonts/Cormorant.ttf)}}
@@ -110,6 +123,15 @@ canvas{{position:absolute;inset:0}}
 .head svg{{width:30px;height:30px;fill:#d6b46a}}
 .head b{{font:600 15px/1 CG;letter-spacing:.34em;padding-left:.34em;color:#e9d39b}}
 .cell{{position:absolute;transform-style:preserve-3d;background:#06190f;box-shadow:inset 0 3px 8px rgba(0,0,0,.7)}}
+{GRAINCSS}
+.ico{{position:absolute;left:50%;top:50%;width:46%;height:62%;transform:translate(-50%,-50%);fill:none;stroke:#6b4510;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:0}}
+.cell[data-n="24"] .ico{{stroke:#5a3a0c;stroke-width:1.4}}
+.foil{{color:#ecd497!important;text-shadow:0 -1px 0 rgba(255,246,214,.55),0 1px 1px rgba(0,0,0,.55)}}
+.front::after,.df::after{{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;mix-blend-mode:multiply;background-image:var(--grain);background-size:160px 160px}}
+#hook{{position:absolute;left:90px;right:90px;top:var(--hookY);font:italic var(--hookS)/1.18 IS;color:#efe2c6;opacity:0;text-shadow:0 6px 30px rgba(0,0,0,.4)}}
+#hook b{{display:block;font:400 calc(var(--hookS)*.9)/1 CG;color:#e7cf93;margin-top:18px}}
+#sub{{position:absolute;left:0;right:0;top:var(--subY);font:italic 26px/1 IS;color:rgba(239,226,198,.9);opacity:0;display:none}}
+body.poster #sub{{display:block}}
 .glow{{position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,#fff1c4 0%,#f1c769 30%,rgba(190,120,30,.5) 62%,rgba(20,10,0,.0) 100%);opacity:0}}
 .door{{position:absolute;inset:0;transform-origin:0 50%;transform-style:preserve-3d}}
 .df,.db{{position:absolute;inset:0;backface-visibility:hidden;display:grid;place-items:center}}
@@ -126,33 +148,35 @@ canvas{{position:absolute;inset:0}}
 #t1{{top:var(--t1Y);font:400 var(--t1S)/1.1 GV;color:#efe2c6;text-shadow:0 4px 30px rgba(0,0,0,.35)}}
 #t2{{top:var(--t2Y);font:500 var(--t2S)/1 CG;letter-spacing:.38em;padding-left:.38em}}
 #seal{{position:absolute;left:var(--sealX);top:var(--sealY);width:300px;height:300px;margin:-150px 0 0 -150px;opacity:0}}
-#lead{{top:var(--leadY);left:130px;right:130px;font:italic 32px/1.35 IS;color:rgba(245,237,226,.95)}}
-#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:24px;font:600 21px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
+#lead{{top:var(--leadY);left:60px;right:60px;font:italic 40px/1.3 IS;color:rgba(245,237,226,.95)}}
+#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:26px;font:600 25px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
 #brands span{{opacity:0;display:inline-block}}
 #brands i{{width:6px;height:6px;background:#cdb27a;transform:rotate(45deg);opacity:0}}
-#price{{top:var(--prY);font:500 70px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
+#price{{top:var(--prY);font:500 84px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 #price span{{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}}
-#cta{{top:var(--ctaY);left:50%;right:auto;width:680px;margin-left:-340px;padding:22px 0 20px;border:1px solid rgba(205,178,122,.6)}}
-#cta b{{display:block;font:400 15px/1 SANS;letter-spacing:.22em;text-transform:uppercase;color:#cdb27a}}
-#cta span{{display:block;margin-top:12px;font:500 36px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
-body.reel{{--boxY:1000px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:820px;--sealY:690px;--leadY:1420px;--brY:1512px;--prY:1558px;--ctaY:1652px}}
-body.poster{{--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:1018px;--prY:1060px;--ctaY:1158px}}
+#cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
+#cta b{{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}}
+#cta span{{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
+body.reel{{--hookY:770px;--hookS:64px;--boxY:1000px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:820px;--sealY:690px;--leadY:1416px;--brY:1490px;--prY:1540px;--ctaY:1656px}}
+body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:1016px;--prY:1056px;--ctaY:1160px}}
 body.poster #lead{{display:none}}
-body.poster #price{{font-size:58px}} body.poster #seal svg{{transform:scale(.86)}}
+body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.poster #cta span{{font-size:38px}} body.poster #seal svg{{transform:scale(.86)}}
 </style></head><body class="MODE"><div id="s">
 <div id="bg"></div><div id="rays"></div><canvas id="dust"></canvas>
 <svg id="frame"><rect id="fr1" fill="none" stroke="#cdb27a" stroke-opacity=".6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/><rect id="fr2" fill="none" stroke="#cdb27a" stroke-opacity=".3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
 <div class="t" id="emb"><svg viewBox="0 0 60 60">{EMB}</svg></div>
 <div class="t" id="brand">COTONOU BOX</div>
+<p id="hook">Et si Noël avait le goût<br>du Bénin&nbsp;?<b>✦</b></p>
 <div class="t" id="t1">Calendrier</div>
 <div class="t" id="t2">DE L’AVENT</div>
+<p id="sub">Et si Noël avait le goût du Bénin&nbsp;?</p>
 <div class="stage"><div class="cam" id="cam"><div class="ground" id="ground"></div><div class="box" id="box">
  <div class="f back"></div><div class="f left"></div><div class="f right"></div><div class="f top"></div><div class="f bottom"></div>
  <div class="f front"><div class="head"><svg viewBox="0 0 60 60">{EMB}</svg><b>COTONOU BOX</b></div>{doors}<div class="shade"></div></div>
 </div></div></div>
 <canvas id="fx"></canvas>
 <div id="seal">{seal}</div>
-<p class="t" id="lead">Vingt-quatre jours de trésors du Bénin et de soins de grandes maisons.</p>
+<p class="t" id="lead">Trésors du Bénin &amp; soins de grandes maisons</p>
 <p class="t" id="brands"><span>RITUALS</span><i></i><span>YVES ROCHER</span><i></i><span>SEPHORA</span></p>
 <p class="t" id="price">45 000<span>FCFA</span></p>
 <div class="t" id="cta"><b>Intéressé(e)&nbsp;? Écrivez-nous sur WhatsApp</b><span>+229 01 97 17 64 59</span></div>
@@ -174,7 +198,7 @@ const doors=[...document.querySelectorAll('.door')];
 const cells=[...document.querySelectorAll('.cell')];
 const others=doors.filter(d=>d.dataset.n!=='24');
 const rank=others.map((d,i)=>i).sort((a,b)=>((a*11)%23)-((b*11)%23));
-const start={{}};rank.forEach((di,k)=>start[di]=5.0+k*0.13);
+const start={{}};rank.forEach((di,k)=>start[di]=4.7+k*0.13);
 const d24=doors.find(d=>d.dataset.n==='24'),c24=cells.find(c=>c.dataset.n==='24');
 function txt(id,t,a,b,dy=20){{const e=$(id),k=eo(p(t,a,b));e.style.opacity=k;e.style.transform=`translateY(${{(1-k)*dy}}px)`;}}
 window.setT=function(t){{
@@ -183,8 +207,9 @@ window.setT=function(t){{
  for(const q of P){{const y=((q.y-q.v*t)%Hd+Hd)%Hd;const tw=.5+.5*Math.sin(q.ph+t*1.7);dctx.fillStyle=`rgba(230,200,135,${{q.a*tw*cl(t/1.5)}})`;dctx.beginPath();dctx.arc(q.x+Math.sin(q.ph+t*.5)*9,y,q.r,0,6.283);dctx.fill();}}
  fr1.style.strokeDashoffset=1-eio(p(t,0,1.6));fr2.style.strokeDashoffset=1-eio(p(t,.3,1.9));
  // caméra
- const rise=eo(p(t,.4,2.6));
- let ry=-42+20*eio(p(t,.4,9))+6*eio(p(t,10.2,12.4)), rx=17-6*eio(p(t,.4,9))-2*eio(p(t,10.2,12.4));
+ const rise=eo(p(t,2.0,3.8));
+ const hk=eo(p(t,.15,.8))*(1-eio(p(t,1.8,2.4)));$('hook').style.opacity=hk;$('hook').style.transform=`translateY(${{(1-eo(p(t,.15,.9)))*24-16*eio(p(t,1.8,2.4))}}px) scale(${{1+.03*p(t,0,2.4)}})`;
+ let ry=-42+20*eio(p(t,2.0,9))+6*eio(p(t,10.2,12.4)), rx=17-6*eio(p(t,2.0,9))-2*eio(p(t,10.2,12.4));
  ry+=1.2*Math.sin(t*.9);rx+=.6*Math.sin(t*.7+1);
  let shake=0;const si=p(t,12.55,13.3);if(si>0&&si<1)shake=(1-si)*9*Math.sin(si*60);
  const fl=6*Math.sin(t*1.3);
@@ -194,10 +219,10 @@ window.setT=function(t){{
  // portes : vague d'ouverture
  others.forEach((d,i)=>{{const s=start[i];const o=eo(p(t,s,s+.38))-eio(p(t,s+.75,s+1.15));const a=104*o;
    d.style.transform=`rotateY(${{-a}}deg)`;d.querySelector('.df').style.filter=`brightness(${{1-.38*Math.sin(a*Math.PI/180)}})`;
-   d.parentElement.querySelector('.glow').style.opacity=o;}});
+   d.parentElement.querySelector('.glow').style.opacity=o;d.parentElement.querySelector('.ico').style.opacity=cl(o*1.4-.25);}});
  const o24=back(p(t,8.9,9.8))*(t>8.9?1:0);const a24=118*Math.min(o24,1.08);
  d24.style.transform=`rotateY(${{-a24}}deg)`;d24.querySelector('.df').style.filter=`brightness(${{1-.35*Math.sin(Math.min(a24,90)*Math.PI/180)}})`;
- c24.querySelector('.glow').style.opacity=cl(o24*1.3)*(1+.15*Math.sin(t*6));
+ c24.querySelector('.glow').style.opacity=cl(o24*1.3)*(1+.15*Math.sin(t*6));c24.querySelector('.ico').style.opacity=cl(o24*1.4-.3);
  $('rays').style.opacity=.85*eo(p(t,9.1,10.2))*(1-.25*eio(p(t,14,16)));
  $('rays').style.transform=`rotate(${{t*4}}deg)`;
  // éclat de lumière
@@ -207,10 +232,10 @@ window.setT=function(t){{
    const g=fctx.createRadialGradient(cx,cy,0,cx,cy,260);const ga=.55*Math.max(0,1-bt/1.4);g.addColorStop(0,`rgba(255,240,200,${{ga}})`);g.addColorStop(1,'rgba(255,220,150,0)');fctx.fillStyle=g;fctx.fillRect(0,0,Wd,Hd);
    for(const q of B){{if(bt>q.life)continue;const k=bt/q.life;const dist=q.v*eo(Math.min(1,bt/1.2));fctx.fillStyle=`rgba(255,226,150,${{(1-k)*.9}})`;fctx.beginPath();fctx.arc(cx+Math.cos(q.a)*dist,cy+Math.sin(q.a)*dist*.8-bt*30,q.r*(1-k*.5),0,6.283);fctx.fill();}}}}
  // textes
- txt('emb',t,.6,1.5,14);
- const kb=eo(p(t,1.0,2.0));$('brand').style.opacity=kb;$('brand').style.letterSpacing=(.8-.44*kb)+'em';
- const kt=eio(p(t,2.0,3.4));$('t1').style.opacity=kt>0?1:0;$('t1').style.clipPath=`inset(-20% ${{(1-kt)*100}}% -20% 0)`;
- const k2=eo(p(t,3.0,3.9));$('t2').style.opacity=k2;$('t2').style.letterSpacing=(.7-.32*k2)+'em';
+ txt('emb',t,2.2,3.0,14);
+ const kb=eo(p(t,2.5,3.4));$('brand').style.opacity=kb;$('brand').style.letterSpacing=(.8-.44*kb)+'em';
+ const kt=eio(p(t,2.9,4.1));$('t1').style.opacity=kt>0?1:0;$('t1').style.clipPath=`inset(-20% ${{(1-kt)*100}}% -20% 0)`;
+ const k2=eo(p(t,3.8,4.6));$('t2').style.opacity=k2;$('t2').style.letterSpacing=(.7-.32*k2)+'em';
  // sceau
  const ks=p(t,12.0,12.6);const seal=$('seal');
  if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`scale(${{(2.3-1.3*Math.min(e,1.06))*1.12}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
@@ -220,6 +245,10 @@ window.setT=function(t){{
  bi.forEach((s,j)=>s.style.opacity=eo(p(t,14.1+j*.3,14.5+j*.3)));
  txt('price',t,14.8,15.6,18);
  txt('cta',t,15.6,16.5,14);
+ const pul=t>16.5?(.5+.5*Math.sin((t-16.5)*3.2)):0;$('cta').style.boxShadow=`0 0 ${{18+22*pul}}px rgba(231,200,120,${{.18+.25*pul}})`;
+ if(document.body.classList.contains('poster')){{$('sub').style.opacity=1;$('hook').style.opacity=0;
+   [1,6,13].forEach((ix,j)=>{{const d=others[ix];const a=[96,78,104][j];d.style.transform=`rotateY(${{-a}}deg)`;d.querySelector('.df').style.filter=`brightness(${{1-.38*Math.sin(a*Math.PI/180)}})`;const c=d.parentElement;c.querySelector('.glow').style.opacity=1;c.querySelector('.ico').style.opacity=1;}});
+   $('cta').style.boxShadow='0 0 26px rgba(231,200,120,.28)';}}
 }};
 </script></body></html>'''
 open(sp+'/r3d/scene.html','w').write(html)

@@ -76,8 +76,8 @@ seal = f'''<svg viewBox="0 0 300 300" width="300" height="300">
  <circle cx="150" cy="150" r="84" fill="none" stroke="#9c7630" stroke-width="1.6"/>
  <text font-family="CG" font-weight="600" font-size="15.5" letter-spacing="4.2" fill="#87631f"><textPath href="#ring" startOffset="0">COTONOU BOX ✦ NOËL 2026 ✦ COTONOU BOX ✦ NOËL 2026 ✦</textPath></text>
  <g transform="translate(135 92) scale(.5)" fill="#8f6a25">{EMB}</g>
- <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="46" fill="#7a5718">Bientôt</text>
- <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="17" letter-spacing="4" fill="#7a5718">DISPONIBLE</text>
+ <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="50" fill="#7a5718">Coming</text>
+ <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#7a5718">SOON</text>
 </g></svg>'''
 
 html = f'''<!doctype html><html><head><meta charset="utf-8"><style>

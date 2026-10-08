@@ -100,7 +100,7 @@ html = f'''<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{{font-family:SANS;src:url(file://{F}/InstrumentSans-Regular.ttf)}}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:var(--w);height:var(--h);overflow:hidden;background:#2a0a13}}
-body.reel{{--bs:1.16;--w:1080px;--h:1920px}} body.poster{{--w:1080px;--h:1350px}}
+body.reel{{--bs:1.04;--w:1080px;--h:1920px}} body.poster{{--w:1080px;--h:1350px}}
 #s{{position:relative;width:var(--w);height:var(--h);overflow:hidden;color:#f5ede2;text-align:center}}
 #bg{{position:absolute;inset:-8%;background:radial-gradient(55% 42% at 50% 52%,#6a2034 0%,#4a1424 50%,#2a0a13 100%)}}
 #rays{{position:absolute;left:50%;top:var(--boxY);width:1800px;height:1800px;margin:-900px 0 0 -900px;opacity:0;
@@ -149,15 +149,22 @@ body.poster #sub{{display:block}}
 #t2{{top:var(--t2Y);font:500 var(--t2S)/1 CG;letter-spacing:.38em;padding-left:.38em}}
 #seal{{position:absolute;left:var(--sealX);top:var(--sealY);width:300px;height:300px;margin:-150px 0 0 -150px;opacity:0}}
 #lead{{top:var(--leadY);left:60px;right:60px;font:italic 40px/1.3 IS;color:rgba(245,237,226,.95)}}
-#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:26px;font:600 25px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
+#brands{{top:var(--brY);display:flex;justify-content:center;align-items:center;gap:18px;font:600 23px/1 CG;letter-spacing:.2em;color:#cdb27a;opacity:1}}
 #brands span{{opacity:0;display:inline-block}}
 #brands i{{width:6px;height:6px;background:#cdb27a;transform:rotate(45deg);opacity:0}}
-#price{{top:var(--prY);font:500 84px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
+#more{{top:var(--moY);font:italic 27px/1 IS;color:rgba(239,226,198,.85)}}
+#pay{{top:var(--payY);left:50%;right:auto;width:740px;margin-left:-370px}}
+.payin{{position:relative;overflow:hidden;display:flex;justify-content:center;align-items:center;gap:22px;padding:18px 0 16px;background:linear-gradient(135deg,#f6e3a8 0%,#d4b06a 45%,#a8803a 100%);color:#3d0f1c;box-shadow:0 10px 30px rgba(0,0,0,.35)}}
+.payin b{{font:700 30px/1 SANS;letter-spacing:.12em}}
+.payin em{{font:600 30px/1 CG;font-style:normal;font-variant-numeric:lining-nums}}
+.payin::after{{content:"";position:absolute;top:0;bottom:0;width:120px;left:var(--shx,-160px);background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-18deg)}}
+body.poster #pay,body.poster #more{{display:none}}
+#price{{top:var(--prY);font:500 76px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 #price span{{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}}
 #cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
 #cta b{{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}}
 #cta span{{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
-body.reel{{--hookY:770px;--hookS:64px;--boxY:1000px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:820px;--sealY:690px;--leadY:1416px;--brY:1490px;--prY:1540px;--ctaY:1656px}}
+body.reel{{--hookY:770px;--hookS:64px;--boxY:944px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:660px;--leadY:1392px;--brY:1452px;--moY:1494px;--prY:1538px;--payY:1632px;--ctaY:1722px}}
 body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:1016px;--prY:1056px;--ctaY:1160px}}
 body.poster #lead{{display:none}}
 body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.poster #cta span{{font-size:38px}} body.poster #seal svg{{transform:scale(.86)}}
@@ -177,8 +184,10 @@ body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.
 <canvas id="fx"></canvas>
 <div id="seal">{seal}</div>
 <p class="t" id="lead">Trésors du Bénin &amp; soins de grandes maisons</p>
-<p class="t" id="brands"><span>RITUALS</span><i></i><span>YVES ROCHER</span><i></i><span>SEPHORA</span></p>
+<p class="t" id="brands"><span>RITUALS</span><i></i><span>YVES ROCHER</span><i></i><span>SEPHORA</span><i></i><span>L’ORÉAL</span></p>
+<p class="t" id="more">et bien d’autres grandes maisons…</p>
 <p class="t" id="price">45 000<span>FCFA</span></p>
+<div class="t" id="pay"><div class="payin"><b>PAYABLE EN 2 FOIS</b><em>25 000 + 20 000 FCFA</em></div></div>
 <div class="t" id="cta"><b>Intéressé(e)&nbsp;? Écrivez-nous sur WhatsApp</b><span>+229 01 97 17 64 59</span></div>
 </div>
 <script>
@@ -241,11 +250,13 @@ window.setT=function(t){{
  if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`scale(${{(2.3-1.3*Math.min(e,1.06))*1.12}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
  txt('lead',t,13.2,14.1,18);
  const bs=document.querySelectorAll('#brands span'),bi=document.querySelectorAll('#brands i');
- bs.forEach((s,j)=>{{const k=eo(p(t,13.8+j*.3,14.4+j*.3));s.style.opacity=k;s.style.transform=`translateY(${{(1-k)*12}}px)`;}});
- bi.forEach((s,j)=>s.style.opacity=eo(p(t,14.1+j*.3,14.5+j*.3)));
- txt('price',t,14.8,15.6,18);
- txt('cta',t,15.6,16.5,14);
- const pul=t>16.5?(.5+.5*Math.sin((t-16.5)*3.2)):0;$('cta').style.boxShadow=`0 0 ${{18+22*pul}}px rgba(231,200,120,${{.18+.25*pul}})`;
+ bs.forEach((s,j)=>{{const k=eo(p(t,13.7+j*.25,14.3+j*.25));s.style.opacity=k;s.style.transform=`translateY(${{(1-k)*12}}px)`;}});
+ bi.forEach((s,j)=>s.style.opacity=eo(p(t,13.95+j*.25,14.35+j*.25)));
+ txt('more',t,14.9,15.6,10);
+ txt('price',t,15.3,16.1,18);
+ {{const e=$('pay'),k=p(t,16.1,16.7);e.style.opacity=cl(k*2.5);e.style.transform=`scale(${{k>0?(.6+.4*back(k)):.6}})`;e.querySelector('.payin').style.setProperty('--shx',(-160+1000*eio(p(t,16.9,17.8)))+'px');}}
+ txt('cta',t,17.4,18.2,14);
+ const pul=t>18.2?(.5+.5*Math.sin((t-18.2)*3.2)):0;$('cta').style.boxShadow=`0 0 ${{18+22*pul}}px rgba(231,200,120,${{.18+.25*pul}})`;
  if(document.body.classList.contains('poster')){{$('sub').style.opacity=1;$('hook').style.opacity=0;
    [1,6,13].forEach((ix,j)=>{{const d=others[ix];const a=[96,78,104][j];d.style.transform=`rotateY(${{-a}}deg)`;d.querySelector('.df').style.filter=`brightness(${{1-.38*Math.sin(a*Math.PI/180)}})`;const c=d.parentElement;c.querySelector('.glow').style.opacity=1;c.querySelector('.ico').style.opacity=1;}});
    $('cta').style.boxShadow='0 0 26px rgba(231,200,120,.28)';}}

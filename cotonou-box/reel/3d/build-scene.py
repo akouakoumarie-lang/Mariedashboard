@@ -162,23 +162,42 @@ body.poster #sub{{display:block}}
 .payin em{{font:600 30px/1 CG;font-style:normal;font-variant-numeric:lining-nums}}
 .payin::after{{content:"";position:absolute;top:0;bottom:0;width:120px;left:var(--shx,-160px);background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-18deg)}}
 body.poster #pay,body.poster #more{{display:none}}
-#mini{{position:absolute;left:520px;top:850px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}}
-#minitag{{position:absolute;left:660px;width:300px;top:798px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}}
+#mini{{position:absolute;left:520px;top:910px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}}
+#minitag{{position:absolute;left:660px;width:300px;top:858px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}}
 .fmt{{position:absolute;top:1400px;width:420px;opacity:0;text-align:center}}
 #f24{{left:120px}} #f12{{left:600px}}
-.fmt b{{display:block;font:600 26px/1 CG;letter-spacing:.3em;color:#cdb27a}}
+.fmt b{{font-variant-numeric:lining-nums;display:block;font:600 26px/1 CG;letter-spacing:.3em;color:#cdb27a}}
 .fmt strong{{display:block;margin-top:14px;font:500 70px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 .fmt strong small{{font:15px/1 SANS;letter-spacing:.3em;color:#cdb27a;vertical-align:14px}}
 .fmt span{{display:block;margin-top:12px;font:italic 28px/1 IS;color:rgba(239,226,198,.9);font-variant-numeric:lining-nums}}
 #pay2{{top:1612px;left:50%;right:auto;width:740px;margin-left:-370px}}
 body.poster #mini,body.poster #minitag,body.poster .fmt,body.poster #pay2{{display:none}}
+#mix{{position:absolute;inset:0;opacity:0;pointer-events:none}}
+body.reel #price,body.reel #pay{{z-index:5}}
+.mixv{{position:absolute;left:0;right:0;top:520px;bottom:0;background:linear-gradient(180deg,rgba(42,10,19,0),rgba(42,10,19,.94) 90px,rgba(42,10,19,.96))}}
+.mx{{position:absolute;left:60px;right:60px;opacity:0}}
+#mx1{{top:690px;font:italic 66px/1.1 IS;color:#fff}}
+#mx2{{top:792px;left:50%;right:auto;width:120px;margin-left:-60px;height:1px;background:#cdb27a}}
+.mxh{{font:700 27px/1 SANS;letter-spacing:.24em;color:#fff}}
+#mx3{{top:850px}} #mx6{{top:1072px}}
+.mxi{{top:904px;font:italic 36px/1.2 IS;color:#fff}}
+.mxp{{top:966px;font:400 64px/1 CG;color:#cdb27a}}
+.mxlogo{{display:flex;justify-content:center;align-items:center;gap:40px}}
+#mx7{{top:1126px}}
+.mxlogo img{{filter:brightness(0) invert(1);display:block}}
+.mxlogo i{{width:7px;height:7px;background:#fff;transform:rotate(45deg)}}
+#endb{{position:absolute;left:0;right:0;top:514px;opacity:0}}
+#endb p{{font:italic 34px/1 IS;color:#fff;margin-bottom:18px}}
+#endb .mxlogo{{gap:26px}}
+body.poster #mix,body.poster #endb{{display:none}}
+body.reel #lead,body.reel #brands,body.reel #more{{display:none}}
 #price{{top:var(--prY);font:500 70px/1 CG;color:#efe2c6;font-variant-numeric:lining-nums}}
 #price span{{font:16px/1 SANS;letter-spacing:.32em;color:#cdb27a;margin-left:12px;vertical-align:16px}}
 #cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
 #cta b{{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}}
 #cta span{{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
-body.reel{{--hookY:770px;--hookS:64px;--boxY:914px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:630px;--leadY:1352px;--brY:1414px;--moY:1504px;--prY:1550px;--payY:1634px;--ctaY:1716px}}
-body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:986px;--prY:1078px;--ctaY:1170px}}
+body.reel{{--hookY:770px;--hookS:64px;--boxY:914px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:630px;--leadY:1352px;--brY:1414px;--moY:1504px;--prY:1330px;--payY:1440px;--ctaY:1716px}}
+body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:982px;--prY:1094px;--ctaY:1186px}}
 body.poster #lead{{display:none}}
 body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.poster #cta span{{font-size:38px}} body.poster #seal svg{{transform:scale(.86)}}
 /* Lisibilité : texte à lire en blanc, plus grand */
@@ -209,7 +228,7 @@ body.poster #brands span:nth-child(1) .lg{{height:22px!important}} body.poster #
 <p id="hook">Et si Noël avait le goût<br>du Bénin&nbsp;?<b>✦</b></p>
 <div class="t" id="t1">Calendrier</div>
 <div class="t" id="t2">DE L’AVENT</div>
-<p id="sub">Et si Noël avait le goût du Bénin&nbsp;?</p>
+<p id="sub">Le meilleur d’ici &amp; d’ailleurs</p>
 <div class="stage"><div class="cam" id="cam"><div class="ground" id="ground"></div><div class="box" id="box">
  <div class="f back"></div><div class="f left"></div><div class="f right"></div><div class="f top"></div><div class="f bottom"></div>
  <div class="f front"><div class="head"><svg viewBox="0 0 60 60">{EMB}</svg><b>COTONOU BOX</b></div>{doors}<div class="shade"></div></div>
@@ -217,9 +236,19 @@ body.poster #brands span:nth-child(1) .lg{{height:22px!important}} body.poster #
 <canvas id="fx"></canvas>
 <div id="seal">{seal}</div>
 <p class="t" id="lead">Trésors du Bénin &amp; soins de grandes maisons</p>
-<p class="t" id="brands"><span><img class="lg" style="height:24px" src="file://{sp}/logos/rituals.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/yves-rocher.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/sephora.png"></span><i></i><span class="loreal">L’ORÉAL</span></p>
+<p class="t" id="brands"><span><img class="lg" style="height:24px" src="file://{sp}/logos/rituals.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/yves-rocher.png"></span><i></i><span><img class="lg" style="height:70px" src="file://{sp}/logos/sephora.png"></span></p>
 <p class="t" id="more">et bien d’autres grandes maisons…</p>
 <p class="t" id="price">45 000<span>FCFA</span></p>
+<div id="mix"><div class="mixv"></div>
+ <p class="mx" id="mx1">Le meilleur d’ici &amp; d’ailleurs</p>
+ <div class="mx mxl" id="mx2"></div>
+ <p class="mx mxh" id="mx3">TRÉSORS DU BÉNIN</p>
+ <p class="mx mxi" id="mx4">Miel · Karité · Kinkéliba · Savon noir · Artisanat</p>
+ <p class="mx mxp" id="mx5">+</p>
+ <p class="mx mxh" id="mx6">SOINS DE GRANDES MAISONS</p>
+ <div class="mx mxlogo" id="mx7"><img src="file://{sp}/logos/rituals.png" style="height:36px"><i></i><img src="file://{sp}/logos/yves-rocher.png" style="height:124px"><i></i><img src="file://{sp}/logos/sephora.png" style="height:124px"></div>
+</div>
+<div id="endb"><p>Le meilleur d’ici &amp; d’ailleurs</p><div class="mxlogo"><img src="file://{sp}/logos/rituals.png" style="height:22px"><i></i><img src="file://{sp}/logos/yves-rocher.png" style="height:76px"><i></i><img src="file://{sp}/logos/sephora.png" style="height:76px"></div></div>
 <div class="t" id="pay"><div class="payin"><b>PAYABLE EN 2 FOIS</b><em>25 000 + 20 000 FCFA</em></div></div>
 <img id="mini" src="file://{sp}/v4/cal12.png">
 <p id="minitag">MINI</p>
@@ -261,7 +290,7 @@ window.setT=function(t){{
  let shake=0;const si=p(t,12.55,13.3);if(si>0&&si<1)shake=(1-si)*9*Math.sin(si*60);
  const fl=6*Math.sin(t*1.3);
  const mv=document.body.classList.contains('reel')?eio(p(t,18.0,19.1)):0;
- $('cam').style.transform=`translate3d(${{shake-215*mv}}px,${{(1-rise)*420+fl+50*mv}}px,0) rotateX(${{rx}}deg) rotateY(${{ry+6*mv}}deg) scale3d(calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}))`;
+ $('cam').style.transform=`translate3d(${{shake-215*mv}}px,${{(1-rise)*420+fl+110*mv}}px,0) rotateX(${{rx}}deg) rotateY(${{ry+6*mv}}deg) scale3d(calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}),calc(var(--bs) * ${{1-.3*mv}}))`;
  $('cam').style.opacity=cl(rise*1.4);
  $('ground').style.opacity=rise;
  // portes : vague d'ouverture
@@ -286,14 +315,17 @@ window.setT=function(t){{
  const k2=eo(p(t,3.8,4.6));$('t2').style.opacity=k2;$('t2').style.letterSpacing=(.7-.32*k2)+'em';
  // sceau
  const ks=p(t,12.0,12.6);const seal=$('seal');
- if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`translate(${{-255*mv}}px,${{95*mv}}px) scale(${{(2.3-1.3*Math.min(e,1.06))*1.12*(1-.32*mv)}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
+ if(ks>0){{const e=back(ks);seal.style.opacity=cl(ks*3);seal.style.transform=`translate(${{-255*mv}}px,${{170*mv}}px) scale(${{(2.3-1.3*Math.min(e,1.06))*1.12*(1-.32*mv)}}) rotate(${{-26+16*eo(ks)}}deg)`;}} else seal.style.opacity=0;
  txt('lead',t,13.2,14.1,18);
  const bs=document.querySelectorAll('#brands span'),bi=document.querySelectorAll('#brands i');
  bs.forEach((s,j)=>{{const k=eo(p(t,13.7+j*.25,14.3+j*.25));s.style.opacity=k;s.style.transform=`translateY(${{(1-k)*12}}px)`;}});
  bi.forEach((s,j)=>s.style.opacity=eo(p(t,13.95+j*.25,14.35+j*.25)));
+ {{const km=eo(p(t,12.9,13.5))*(1-eio(p(t,17.9,18.4)));$('mix').style.opacity=km;$('seal').style.opacity=(+$('seal').style.opacity||0)*(1-km);
+   [['mx1',13.2],['mx2',13.5],['mx3',13.7],['mx4',14.0],['mx5',14.4],['mx6',14.6],['mx7',14.9]].forEach(([id,a])=>{{const k=eo(p(t,a,a+.6));const e=$(id);e.style.opacity=k;e.style.transform=(id==='mx2'?`scaleX(${{k}})`:`translateY(${{(1-k)*22}}px)`);}});
+   const ke=eo(p(t,19.0,19.8));$('endb').style.opacity=ke;$('endb').style.transform=`translateY(${{(1-ke)*16}}px)`;}}
  txt('more',t,14.9,15.6,10);
- txt('price',t,15.3,16.1,18);
- {{const e=$('pay'),k=p(t,16.1,16.7);e.style.opacity=cl(k*2.5);e.style.transform=`scale(${{k>0?(.6+.4*back(k)):.6}})`;e.querySelector('.payin').style.setProperty('--shx',(-160+1000*eio(p(t,16.9,17.8)))+'px');}}
+ txt('price',t,15.7,16.4,18);
+ {{const e=$('pay'),k=p(t,16.4,17.0);e.style.opacity=cl(k*2.5);e.style.transform=`scale(${{k>0?(.6+.4*back(k)):.6}})`;e.querySelector('.payin').style.setProperty('--shx',(-160+1000*eio(p(t,17.0,17.8)))+'px');}}
  if(document.body.classList.contains('reel')){{
    const out=1-eio(p(t,17.9,18.4));['lead','brands','more','price','pay'].forEach(id=>{{const e=$(id);e.style.opacity=(+getComputedStyle(e).opacity||0)*out;}});
    const km=eo(p(t,18.5,19.3));$('mini').style.opacity=km;$('mini').style.transform=`translateY(${{(1-km)*60}}px) scale(${{.9+.1*km}})`;$('minitag').style.opacity=eo(p(t,19.0,19.6));

@@ -83,12 +83,12 @@ seal = f'''<svg viewBox="0 0 300 300" width="300" height="300">
 </defs>
 <g filter="url(#drop)"><path d="{blob}" fill="url(#wax)" filter="url(#emb)"/></g>
 <g filter="url(#emb)">
- <circle cx="150" cy="150" r="114" fill="none" stroke="#9c7630" stroke-width="3"/>
+ <circle cx="150" cy="150" r="114" fill="none" stroke="#6b4a14" stroke-width="3"/>
  <circle cx="150" cy="150" r="84" fill="none" stroke="#9c7630" stroke-width="1.6"/>
- <text font-family="CG" font-weight="600" font-size="15.5" letter-spacing="4.2" fill="#87631f"><textPath href="#ring" startOffset="0">COTONOU BOX ✦ NOËL 2026 ✦ COTONOU BOX ✦ NOËL 2026 ✦</textPath></text>
- <g transform="translate(135 92) scale(.5)" fill="#8f6a25">{EMB}</g>
- <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="50" fill="#7a5718">Coming</text>
- <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#7a5718">SOON</text>
+ <text font-family="CG" font-weight="600" font-size="15.5" letter-spacing="4.2" fill="#4a2c08"><textPath href="#ring" startOffset="0">COTONOU BOX ✦ NOËL 2026 ✦ COTONOU BOX ✦ NOËL 2026 ✦</textPath></text>
+ <g transform="translate(135 92) scale(.5)" fill="#5a3a0c">{EMB}</g>
+ <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="50" fill="#3d2405">Coming</text>
+ <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#3d2405">SOON</text>
 </g></svg>'''
 
 GRAINSVG = urllib.parse.quote('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .4  0 0 0 0 .3  0 0 0 1.2 -.2"/></filter><rect width="160" height="160" filter="url(#n)"/></svg>')
@@ -98,6 +98,7 @@ html = f'''<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{{font-family:CG;font-weight:300 700;src:url(file://{sp}/fonts/Cormorant.ttf)}}
 @font-face{{font-family:IS;font-style:italic;src:url(file://{F}/InstrumentSerif-Italic.ttf)}}
 @font-face{{font-family:SANS;src:url(file://{F}/InstrumentSans-Regular.ttf)}}
+@font-face{{font-family:SANS;font-weight:700;src:url(file://{F}/InstrumentSans-Bold.ttf)}}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:var(--w);height:var(--h);overflow:hidden;background:#2a0a13}}
 body.reel{{--bs:1.04;--w:1080px;--h:1920px}} body.poster{{--w:1080px;--h:1350px}}
@@ -161,8 +162,8 @@ body.poster #sub{{display:block}}
 .payin em{{font:600 30px/1 CG;font-style:normal;font-variant-numeric:lining-nums}}
 .payin::after{{content:"";position:absolute;top:0;bottom:0;width:120px;left:var(--shx,-160px);background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-18deg)}}
 body.poster #pay,body.poster #more{{display:none}}
-#mini{{position:absolute;left:520px;top:880px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}}
-#minitag{{position:absolute;left:660px;width:300px;top:828px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}}
+#mini{{position:absolute;left:520px;top:850px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}}
+#minitag{{position:absolute;left:660px;width:300px;top:798px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}}
 .fmt{{position:absolute;top:1400px;width:420px;opacity:0;text-align:center}}
 #f24{{left:120px}} #f12{{left:600px}}
 .fmt b{{display:block;font:600 26px/1 CG;letter-spacing:.3em;color:#cdb27a}}
@@ -176,10 +177,30 @@ body.poster #mini,body.poster #minitag,body.poster .fmt,body.poster #pay2{{displ
 #cta{{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}}
 #cta b{{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}}
 #cta span{{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}}
-body.reel{{--hookY:770px;--hookS:64px;--boxY:944px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:660px;--leadY:1382px;--brY:1436px;--moY:1512px;--prY:1550px;--payY:1636px;--ctaY:1718px}}
-body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:992px;--prY:1070px;--ctaY:1166px}}
+body.reel{{--hookY:770px;--hookS:64px;--boxY:914px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:630px;--leadY:1352px;--brY:1414px;--moY:1504px;--prY:1550px;--payY:1634px;--ctaY:1716px}}
+body.poster{{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:986px;--prY:1078px;--ctaY:1170px}}
 body.poster #lead{{display:none}}
 body.poster #price{{font-size:62px}} body.poster #brands{{font-size:22px}} body.poster #cta span{{font-size:38px}} body.poster #seal svg{{transform:scale(.86)}}
+/* Lisibilité : texte à lire en blanc, plus grand */
+#brand{{color:#fff!important;font-weight:600!important;font-size:25px!important}}
+#t2{{color:#fff!important;font-weight:600!important}}
+#hook,#lead,#sub{{color:#fff!important}}
+#more{{color:#fff!important;font-size:31px!important}}
+#brands .lg{{filter:brightness(0) invert(1)}}
+#brands span:nth-child(1) .lg{{height:26px!important}}
+#brands span:nth-child(3) .lg,#brands span:nth-child(5) .lg{{height:76px!important}}
+#brands{{gap:22px!important}}
+body.poster #brands span:nth-child(1) .lg{{height:22px!important}} body.poster #brands span:nth-child(3) .lg,body.poster #brands span:nth-child(5) .lg{{height:64px!important}} body.poster #brands .loreal{{font-size:26px!important}}
+#brands .loreal{{background:none!important;color:#fff!important;font-size:28px!important;font-weight:700!important}}
+#brands i{{background:#fff!important}}
+#price span{{color:#fff!important;font:700 22px/1 SANS!important;vertical-align:18px!important}}
+.fmt b{{color:#fff!important;font-size:30px!important;font-weight:700!important}}
+.fmt strong small{{color:#fff!important;font:700 20px/1 SANS!important}}
+.fmt span{{color:#fff!important;font-size:32px!important}}
+#minitag{{color:#fff!important;font-weight:700!important;font-size:24px!important}}
+#cta b{{color:#fff!important;font:700 21px/1 SANS!important;letter-spacing:.12em!important}}
+#cta span{{color:#fff!important}}
+.payin b{{font-size:32px!important}} .payin em{{font-size:32px!important;font-weight:700!important}}
 </style></head><body class="MODE"><div id="s">
 <div id="bg"></div><div id="rays"></div><canvas id="dust"></canvas>
 <svg id="frame"><rect id="fr1" fill="none" stroke="#cdb27a" stroke-opacity=".6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/><rect id="fr2" fill="none" stroke="#cdb27a" stroke-opacity=".3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>

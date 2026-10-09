@@ -3,6 +3,7 @@
 @font-face{font-family:CG;font-weight:300 700;src:url(../../affiche/fonts/Cormorant.ttf)}
 @font-face{font-family:IS;font-style:italic;src:url(../../affiche/fonts/InstrumentSerif-Italic.ttf)}
 @font-face{font-family:SANS;src:url(../../affiche/fonts/InstrumentSans-Regular.ttf)}
+@font-face{font-family:SANS;font-weight:700;src:url(../../affiche/fonts/InstrumentSans-Bold.ttf)}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:var(--w);height:var(--h);overflow:hidden;background:#2a0a13}
 body.reel{--bs:1.04;--w:1080px;--h:1920px} body.poster{--w:1080px;--h:1350px}
@@ -66,8 +67,8 @@ body.poster #sub{display:block}
 .payin em{font:600 30px/1 CG;font-style:normal;font-variant-numeric:lining-nums}
 .payin::after{content:"";position:absolute;top:0;bottom:0;width:120px;left:var(--shx,-160px);background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-18deg)}
 body.poster #pay,body.poster #more{display:none}
-#mini{position:absolute;left:520px;top:880px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}
-#minitag{position:absolute;left:660px;width:300px;top:828px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}
+#mini{position:absolute;left:520px;top:850px;width:580px;opacity:0;filter:drop-shadow(0 26px 30px rgba(0,0,0,.4))}
+#minitag{position:absolute;left:660px;width:300px;top:798px;font:600 20px/1 CG;letter-spacing:.5em;padding-left:.5em;color:#cdb27a;opacity:0}
 .fmt{position:absolute;top:1400px;width:420px;opacity:0;text-align:center}
 #f24{left:120px} #f12{left:600px}
 .fmt b{display:block;font:600 26px/1 CG;letter-spacing:.3em;color:#cdb27a}
@@ -81,10 +82,30 @@ body.poster #mini,body.poster #minitag,body.poster .fmt,body.poster #pay2{displa
 #cta{top:var(--ctaY);left:50%;right:auto;width:740px;margin-left:-370px;padding:24px 0 22px;border:1px solid rgba(205,178,122,.75);background:rgba(20,4,9,.25)}
 #cta b{display:block;font:400 17px/1 SANS;letter-spacing:.2em;text-transform:uppercase;color:#cdb27a}
 #cta span{display:block;margin-top:12px;font:500 44px/1 CG;letter-spacing:.06em;font-variant-numeric:lining-nums}
-body.reel{--hookY:770px;--hookS:64px;--boxY:944px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:660px;--leadY:1382px;--brY:1436px;--moY:1512px;--prY:1550px;--payY:1636px;--ctaY:1718px}
-body.poster{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:992px;--prY:1070px;--ctaY:1166px}
+body.reel{--hookY:770px;--hookS:64px;--boxY:914px;--embY:140px;--t1Y:276px;--t1S:150px;--t2Y:458px;--t2S:40px;--sealX:800px;--sealY:630px;--leadY:1352px;--brY:1414px;--moY:1504px;--prY:1550px;--payY:1634px;--ctaY:1716px}
+body.poster{--subY:376px;--hookY:-500px;--hookS:40px;--bs:.74;--boxY:700px;--embY:50px;--t1Y:184px;--t1S:118px;--t2Y:324px;--t2S:30px;--sealX:790px;--sealY:500px;--leadY:1000px;--brY:986px;--prY:1078px;--ctaY:1170px}
 body.poster #lead{display:none}
 body.poster #price{font-size:62px} body.poster #brands{font-size:22px} body.poster #cta span{font-size:38px} body.poster #seal svg{transform:scale(.86)}
+/* Lisibilité : texte à lire en blanc, plus grand */
+#brand{color:#fff!important;font-weight:600!important;font-size:25px!important}
+#t2{color:#fff!important;font-weight:600!important}
+#hook,#lead,#sub{color:#fff!important}
+#more{color:#fff!important;font-size:31px!important}
+#brands .lg{filter:brightness(0) invert(1)}
+#brands span:nth-child(1) .lg{height:26px!important}
+#brands span:nth-child(3) .lg,#brands span:nth-child(5) .lg{height:76px!important}
+#brands{gap:22px!important}
+body.poster #brands span:nth-child(1) .lg{height:22px!important} body.poster #brands span:nth-child(3) .lg,body.poster #brands span:nth-child(5) .lg{height:64px!important} body.poster #brands .loreal{font-size:26px!important}
+#brands .loreal{background:none!important;color:#fff!important;font-size:28px!important;font-weight:700!important}
+#brands i{background:#fff!important}
+#price span{color:#fff!important;font:700 22px/1 SANS!important;vertical-align:18px!important}
+.fmt b{color:#fff!important;font-size:30px!important;font-weight:700!important}
+.fmt strong small{color:#fff!important;font:700 20px/1 SANS!important}
+.fmt span{color:#fff!important;font-size:32px!important}
+#minitag{color:#fff!important;font-weight:700!important;font-size:24px!important}
+#cta b{color:#fff!important;font:700 21px/1 SANS!important;letter-spacing:.12em!important}
+#cta span{color:#fff!important}
+.payin b{font-size:32px!important} .payin em{font-size:32px!important;font-weight:700!important}
 </style></head><body class="MODE"><div id="s">
 <div id="bg"></div><div id="rays"></div><canvas id="dust"></canvas>
 <svg id="frame"><rect id="fr1" fill="none" stroke="#cdb27a" stroke-opacity=".6" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/><rect id="fr2" fill="none" stroke="#cdb27a" stroke-opacity=".3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/></svg>
@@ -113,12 +134,12 @@ body.poster #price{font-size:62px} body.poster #brands{font-size:22px} body.post
 </defs>
 <g filter="url(#drop)"><path d="M274.3,150.0 C273.0,159.4 271.1,168.1 269.4,177.2 C267.7,186.4 266.6,195.6 264.0,204.9 C261.5,214.2 260.4,226.3 254.1,233.0 C247.8,239.8 234.2,240.2 226.0,245.3 C217.8,250.5 212.6,258.2 204.9,264.1 C197.2,269.9 188.9,277.5 179.8,280.5 C170.6,283.5 159.8,282.6 150.0,282.2 C140.2,281.9 129.7,281.8 120.7,278.4 C111.7,275.0 105.7,265.2 96.2,261.8 C86.6,258.5 70.9,264.0 63.6,258.3 C56.3,252.6 56.5,237.0 52.4,227.9 C48.2,218.7 42.4,212.0 38.8,203.5 C35.2,195.1 32.7,186.2 30.6,177.3 C28.5,168.3 27.9,159.5 26.0,150.0 C24.1,140.5 18.6,129.8 19.4,120.2 C20.1,110.6 27.3,102.3 30.5,92.5 C33.8,82.6 32.6,68.9 38.8,61.3 C44.9,53.6 58.0,50.4 67.6,46.6 C77.2,42.8 87.2,41.7 96.3,38.5 C105.4,35.4 113.2,30.9 122.1,27.8 C131.1,24.8 140.5,21.2 150.0,20.2 C159.5,19.3 169.6,20.4 179.2,22.0 C188.8,23.7 197.7,27.6 207.7,30.2 C217.7,32.9 233.0,30.7 239.4,37.9 C245.7,45.2 241.0,64.5 245.6,73.8 C250.1,83.1 261.4,86.0 266.7,93.8 C271.9,101.7 275.9,111.6 277.1,121.0 C278.4,130.3 275.6,140.6 274.3,150.0Z" fill="url(#wax)" filter="url(#emb)"/></g>
 <g filter="url(#emb)">
- <circle cx="150" cy="150" r="114" fill="none" stroke="#9c7630" stroke-width="3"/>
+ <circle cx="150" cy="150" r="114" fill="none" stroke="#6b4a14" stroke-width="3"/>
  <circle cx="150" cy="150" r="84" fill="none" stroke="#9c7630" stroke-width="1.6"/>
- <text font-family="CG" font-weight="600" font-size="15.5" letter-spacing="4.2" fill="#87631f"><textPath href="#ring" startOffset="0">COTONOU BOX ✦ NOËL 2026 ✦ COTONOU BOX ✦ NOËL 2026 ✦</textPath></text>
- <g transform="translate(135 92) scale(.5)" fill="#8f6a25"><path d="M30 4C37 13 37 24 30 31 23 24 23 13 30 4Z"/><path d="M29 31C21 30 13 22 11 11 21 12 28 21 29 31Z"/><path d="M31 31C39 30 47 22 49 11 39 12 32 21 31 31Z"/><path d="M29 37C21 40 11 38 5 29 15 26 24 30 29 37Z"/><path d="M31 37C39 40 49 38 55 29 45 26 36 30 31 37Z"/><path d="M28.6 30h2.8v24h-2.8z"/><path d="M30 54c-4-5-9-6-13-4 4 3 9 4 13 4zm0 0c4-5 9-6 13-4-4 3-9 4-13 4z"/></g>
- <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="50" fill="#7a5718">Coming</text>
- <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#7a5718">SOON</text>
+ <text font-family="CG" font-weight="600" font-size="15.5" letter-spacing="4.2" fill="#4a2c08"><textPath href="#ring" startOffset="0">COTONOU BOX ✦ NOËL 2026 ✦ COTONOU BOX ✦ NOËL 2026 ✦</textPath></text>
+ <g transform="translate(135 92) scale(.5)" fill="#5a3a0c"><path d="M30 4C37 13 37 24 30 31 23 24 23 13 30 4Z"/><path d="M29 31C21 30 13 22 11 11 21 12 28 21 29 31Z"/><path d="M31 31C39 30 47 22 49 11 39 12 32 21 31 31Z"/><path d="M29 37C21 40 11 38 5 29 15 26 24 30 29 37Z"/><path d="M31 37C39 40 49 38 55 29 45 26 36 30 31 37Z"/><path d="M28.6 30h2.8v24h-2.8z"/><path d="M30 54c-4-5-9-6-13-4 4 3 9 4 13 4zm0 0c4-5 9-6 13-4-4 3-9 4-13 4z"/></g>
+ <text x="150" y="168" text-anchor="middle" font-family="GV" font-size="50" fill="#3d2405">Coming</text>
+ <text x="150" y="196" text-anchor="middle" font-family="CG" font-weight="700" font-size="21" letter-spacing="7" fill="#3d2405">SOON</text>
 </g></svg></div>
 <p class="t" id="lead">Trésors du Bénin &amp; soins de grandes maisons</p>
 <p class="t" id="brands"><span><img class="lg" style="height:24px" src="../../affiche/logos/rituals.png"></span><i></i><span><img class="lg" style="height:70px" src="../../affiche/logos/yves-rocher.png"></span><i></i><span><img class="lg" style="height:70px" src="../../affiche/logos/sephora.png"></span><i></i><span class="loreal">L’ORÉAL</span></p>

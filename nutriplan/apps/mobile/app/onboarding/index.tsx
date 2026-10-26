@@ -80,7 +80,7 @@ function OnboardingForm({ initialValues, initialStep }: { initialValues: Onboard
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <ProgressBar value={(step + 1) / STEPS.length} label={`Progression : étape ${step + 1} sur ${STEPS.length}`} />
       </View>
-      <ScrollView ref={scroll} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }} keyboardShouldPersistTaps="handled">
         <FadeIn key={current.key}>
           <AppText variant="title" accessibilityRole="header">
             {current.title}

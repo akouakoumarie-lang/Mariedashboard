@@ -45,7 +45,9 @@ export function Screen({
   footer?: ReactNode;
   refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
 }) {
-  const content = <View style={[styles.content, padded && styles.padded]}>{children}</View>;
+  // Sans défilement global, le contenu doit rester borné à la hauteur de l'écran (minHeight: 0)
+  // pour que les zones défilantes internes (questionnaire) défilent au lieu de déborder.
+  const content = <View style={[styles.content, !scroll && styles.bounded, padded && styles.padded]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       {scroll ? (
@@ -506,6 +508,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
   content: { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexGrow: 1 },
   padded: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  bounded: { flex: 1, minHeight: 0 },
   footer: {
     padding: spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,

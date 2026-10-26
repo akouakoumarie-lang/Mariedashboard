@@ -163,7 +163,7 @@ Migrations : `20261026140248_init` (schéma) et `20261026150000_enable_rls` (act
 `POST /ai/recipe-ideas` (`apps/api/src/ai/ai.service.ts`) :
 
 1. Construit la liste des ingrédients **déjà filtrés** selon les allergies, régimes et exclusions de l'utilisateur.
-2. Appelle Claude (`claude-opus-5-5` par défaut, configurable avec `AI_MODEL`) via le SDK officiel, avec une **sortie structurée** (`output_config.format` + schéma Zod), un effort bas, un délai maximal de 45 s et le repli serveur `fallbacks: "default"` en cas de refus.
+2. Appelle Claude (modèle défini par `AI_MODEL`) via le SDK officiel, avec une **sortie structurée** (`output_config.format` + schéma Zod), un effort bas, un délai maximal de 45 s et le repli serveur `fallbacks: "default"` en cas de refus.
 3. Revalide la réponse avec Zod, rejette tout ingrédient inconnu ou toute quantité invalide, puis repasse chaque idée dans `checkRecipe`. Une idée non conforme n'est jamais affichée.
 4. **Repli** : si la clé est absente, si le service est indisponible ou refuse, ou si aucune idée ne passe les vérifications, on propose les recettes du catalogue qui utilisent le plus le stock de l'utilisateur. La réponse indique toujours sa source (`ai` ou `catalogue`).
 

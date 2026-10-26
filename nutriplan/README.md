@@ -70,7 +70,7 @@ npm run prisma:deploy -w @nutriplan/api     # applique les migrations
 npm run seed -w @nutriplan/api              # charge le catalogue de démonstration (idempotent)
 ```
 
-Variables de `apps/api/.env` (voir [`apps/api/.env.example`](apps/api/.env.example)) : `DATABASE_URL`, `PORT`, `CORS_ORIGINS`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` (facultatif), `AI_MODEL` (par défaut `claude-opus-5-5`), `RETENTION_MONTHS`.
+Variables de `apps/api/.env` (voir [`apps/api/.env.example`](apps/api/.env.example)) : `DATABASE_URL`, `PORT`, `CORS_ORIGINS`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` et `AI_MODEL` (facultatifs : l'IA n'est active que si les deux sont renseignés), `RETENTION_MONTHS`.
 
 ### 4. Application mobile
 

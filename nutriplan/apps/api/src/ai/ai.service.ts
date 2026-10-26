@@ -64,7 +64,7 @@ export class AiService {
     private readonly catalog: CatalogRepository,
     private readonly userContext: UserContextService,
   ) {
-    this.client = config.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY, timeout: 45_000, maxRetries: 1 }) : null;
+    this.client = config.ANTHROPIC_API_KEY && config.AI_MODEL ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY, timeout: 45_000, maxRetries: 1 }) : null;
   }
 
   get enabled(): boolean {

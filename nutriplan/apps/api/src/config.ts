@@ -10,7 +10,8 @@ const envSchema = z.object({
   SUPABASE_JWT_SECRET: z.string().default(''),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(''),
   ANTHROPIC_API_KEY: z.string().default(''),
-  AI_MODEL: z.string().default('claude-opus-5-5'),
+  /** Identifiant du modèle Claude (voir la documentation Anthropic) ; vide = IA désactivée. */
+  AI_MODEL: z.string().default(''),
   /** Durée de conservation des plannings archivés, en mois. */
   RETENTION_MONTHS: z.coerce.number().int().min(1).default(12),
 });

@@ -2,7 +2,7 @@ import { Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query } from '@nes
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { recipeQuerySchema, type RecipeQuery } from '@nutriplan/core';
 import { z } from 'zod';
-import { CurrentUser } from '../auth/auth.guard';
+import { CurrentUser, Public } from '../auth/auth.guard';
 import type { AuthUser } from '../auth/auth.service';
 import { ZodPipe } from '../common/zod';
 import { CatalogService } from './catalog.service';
@@ -16,6 +16,7 @@ export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
 
   @Get('ingredients')
+  @Public() // Données de catalogue communes (non personnelles) : utilisées par le questionnaire avant l'inscription.
   @ApiQuery({ name: 'search', required: false })
   ingredients(@Query(new ZodPipe(z.object({ search: z.string().trim().max(80).optional() }))) q: { search?: string }) {
     return this.catalog.ingredients(q.search);

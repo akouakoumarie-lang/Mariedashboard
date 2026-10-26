@@ -148,6 +148,14 @@ describe('liste de courses', () => {
     expect(estimatePurchaseCostCents(ING_MAP.get('huile')!, 15)).toBe(14); // prorata
     expect(estimatePurchaseCostCents(ING_MAP.get('banane')!, 3)).toBe(75); // à l’unité
   });
+  it('arrondit les articles vendus à la pièce à l’unité supérieure', () => {
+    const list = buildShoppingList([{ recipe: recipe('banane-choco'), servings: 3 }], ING_MAP);
+    const banane = list.items.find((i) => i.ingredientId === 'banane')!;
+    expect(banane.quantity).toBe(3);
+    const half = buildShoppingList([{ recipe: recipe('banane-choco'), servings: 1 }], ING_MAP, [{ ingredientId: 'banane', quantity: 0.5, unit: 'piece' }]);
+    expect(half.items.find((i) => i.ingredientId === 'banane')).toMatchObject({ quantity: 1, estimatedPriceCents: 25 });
+  });
+
   it('calcule le budget total et le regroupement par rayon', () => {
     const list = buildShoppingList([{ recipe: recipe('poulet-riz'), servings: 2 }], ING_MAP);
     // poulet 300 g → 1 paquet de 400 g = 480 c ; riz 150 g → 1 paquet de 1 kg = 200 c

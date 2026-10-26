@@ -83,8 +83,10 @@ export function buildShoppingList(
   for (const [ingredientId, needed] of base) {
     const info = ingredients.get(ingredientId)!;
     const fromInventory = Math.min(needed, stock.get(ingredientId) ?? 0);
-    const toBuy = needed - fromInventory;
-    if (toBuy <= 1e-6) {
+    const remaining = needed - fromInventory;
+    // On n'achète pas une demi-pièce : arrondi à l'unité supérieure (quantité et prix).
+    const toBuy = info.unit === 'piece' ? Math.ceil(remaining - 1e-6) : remaining;
+    if (remaining <= 1e-6) {
       coveredByInventory.push({ ingredientId, name: info.name, quantity: needed, unit: info.unit });
       continue;
     }

@@ -111,7 +111,7 @@ export class ProgressService {
       message:
         completed.length === 0
           ? 'Chaque petit pas compte : cochez un repas lorsque vous l’avez préparé pour suivre vos habitudes.'
-          : `Bravo pour les ${completed.length} repas préparés ! Les journées incomplètes font partie du quotidien.`,
+          : `Bravo pour ${completed.length === 1 ? 'ce premier repas préparé' : `les ${completed.length} repas préparés`} ! Les journées incomplètes font partie du quotidien.`,
     };
   }
 

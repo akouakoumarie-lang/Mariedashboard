@@ -13,9 +13,14 @@
     "test:e2e": "npm run test:e2e -w @nutriplan/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "api:dev": "npm run start:dev -w @nutriplan/api",
-    "mobile:start": "npm run start -w @nutriplan/mobile"
+    "mobile:start": "npm run start -w @nutriplan/mobile",
+    "postinstall": "npm run build -w @nutriplan/core && npm run prisma:generate -w @nutriplan/api"
   },
   "engines": {
     "node": ">=22.9"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

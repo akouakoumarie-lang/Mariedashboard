@@ -2,6 +2,8 @@
 
 *My life, organized.* ✦ Mon cockpit personnel, pensé comme une app de téléphone : glam rose & léopard, inspiration Bratz.
 
+> Ce dépôt contient aussi **NutriPlan**, une application mobile de nutrition et de planification alimentaire (Expo + NestJS + PostgreSQL) : voir [`nutriplan/README.md`](nutriplan/README.md).
+
 - **Écran d'accueil** : MARIE DASHBOARD, avec ta photo en fond si tu en ajoutes une.
 - **Accueil** : bonjour + rappels 🔔, affirmation du jour, « Aujourd'hui » (choses à faire, échéances, prochain salaire, sport, gratitude), tuiles Money, Career, Travel et Goals.
 - **Tâches** : filtres Tout, Pro, École et Perso ; en retard, aujourd'hui (avec heures), cette semaine, plus tard.

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { ScrollView, View } from 'react-native';
 import { AppText, Button, FadeIn, Loading, ProgressBar, Row, Screen } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
+import { LOCAL_MODE } from '../../src/lib/config';
 import { DEFAULT_VALUES, loadDraft, onboardingFormSchema, saveDraft, type OnboardingInput, type OnboardingOutput } from '../../src/features/onboarding/form';
 import { STEPS } from '../../src/features/onboarding/steps';
 import { colors, spacing } from '../../src/theme/tokens';
@@ -19,7 +20,8 @@ export default function Onboarding() {
 }
 
 function OnboardingForm({ initialValues, initialStep }: { initialValues: OnboardingInput; initialStep: number }) {
-  const { session } = useAuth();
+  const { session: authSession } = useAuth();
+  const session = authSession || LOCAL_MODE;
   const [step, setStep] = useState(Math.min(initialStep, STEPS.length - 1));
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const form = useForm<OnboardingInput, unknown, OnboardingOutput>({

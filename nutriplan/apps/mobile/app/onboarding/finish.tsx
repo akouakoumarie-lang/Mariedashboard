@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppText, Button, EmptyState, Loading, Notice, Screen } from '../../src/components/ui';
 import { errorMessage } from '../../src/lib/api';
 import { useAuth } from '../../src/lib/auth';
+import { LOCAL_MODE } from '../../src/lib/config';
 import { queryClient } from '../../src/lib/queries';
 import { clearDraft, loadDraft, onboardingFormSchema } from '../../src/features/onboarding/form';
 import { submitOnboarding } from '../../src/features/onboarding/submit';
@@ -12,7 +13,8 @@ type State = { kind: 'working'; label: string } | { kind: 'error'; message: stri
 
 /** Envoi des réponses du questionnaire une fois le compte créé. */
 export default function Finish() {
-  const { session } = useAuth();
+  const { session: authSession } = useAuth();
+  const session = authSession || LOCAL_MODE;
   const [state, setState] = useState<State>({ kind: 'working', label: 'Préparation…' });
 
   const run = useCallback(async () => {

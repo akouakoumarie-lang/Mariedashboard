@@ -4,13 +4,9 @@
  *   npm run seed -w @nutriplan/api
  */
 import { PrismaClient } from '@prisma/client';
-import { convertToBase } from '@nutriplan/core';
-import { INGREDIENTS } from './seed-data/ingredients';
-import { RECIPES } from './seed-data/recipes';
+import { convertToBase, DEMO_INGREDIENTS as INGREDIENTS, DEMO_NUTRITION_SOURCE, DEMO_PRICE_DATE as PRICE_DATE, DEMO_PRICE_SOURCE, DEMO_RECIPES as RECIPES } from '@nutriplan/core';
 
-export const DEMO_PRICE_SOURCE = 'Estimation indicative de démonstration — non relevée en magasin, à vérifier';
-export const DEMO_NUTRITION_SOURCE = 'Valeurs approximatives (ordre de grandeur Ciqual/ANSES) — estimation';
-export const DEMO_PRICE_DATE = new Date('2026-10-26T00:00:00Z');
+const DEMO_PRICE_DATE = new Date(`${PRICE_DATE}T00:00:00Z`);
 
 export async function seedCatalog(prisma: PrismaClient): Promise<{ ingredients: number; recipes: number }> {
   const bySlug = new Map(INGREDIENTS.map((i) => [i.slug, i]));

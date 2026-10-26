@@ -1,24 +1,17 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Share, Switch, View } from 'react-native';
+import { Platform, Share, Switch, View } from 'react-native';
 import { AppText, Card, Divider, ListItem, Notice, Row, Screen, SectionHeader } from '../../src/components/ui';
 import { api, errorMessage } from '../../src/lib/api';
+import { useConfirm } from '../../src/components/confirm';
+import { StorageNotice } from '../../src/components/storage-notice';
 import { useAuth } from '../../src/lib/auth';
+import { LOCAL_MODE } from '../../src/lib/config';
+import { queryClient } from '../../src/lib/queries';
 import { disableDailyReminder, enableDailyReminder, notificationsSupported } from '../../src/lib/notifications';
 import { useAccount, useNotificationSetting, useProfile } from '../../src/lib/queries';
 import { clearDraft } from '../../src/features/onboarding/form';
 import { colors, spacing } from '../../src/theme/tokens';
-
-function confirmDestructive(title: string, message: string, onConfirm: () => void) {
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: 'Annuler', style: 'cancel' },
-    { text: 'Supprimer', style: 'destructive', onPress: onConfirm },
-  ]);
-}
 
 export default function Settings() {
   const { signOut } = useAuth();
@@ -27,6 +20,7 @@ export default function Settings() {
   const notif = useNotificationSetting();
   const [message, setMessage] = useState<{ tone: 'success' | 'danger' | 'info'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmEl, confirm] = useConfirm();
 
   const toggleNotifications = async (enabled: boolean) => {
     setMessage(null);
@@ -49,7 +43,11 @@ export default function Settings() {
     try {
       const data = await api<unknown>('/me/export');
       const json = JSON.stringify(data, null, 2);
-      if (Platform.OS === 'web') {
+      const claude = (globalThis as unknown as { claude?: { use(n: string): Promise<unknown> } }).claude;
+      const downloads = claude?.use ? ((await claude.use('downloads')) as { save(f: { filename: string; data: string }): Promise<unknown> } | null) : null;
+      if (downloads) {
+        await downloads.save({ filename: 'nutriplan-mes-donnees.json', data: json });
+      } else if (Platform.OS === 'web') {
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -69,30 +67,42 @@ export default function Settings() {
   };
 
   const deleteAccount = () =>
-    confirmDestructive('Supprimer mon compte', 'Toutes vos données (profil, allergies, programmes, listes de courses, suivi) seront définitivement supprimées. Cette action est irréversible.', async () => {
+    confirm({
+      title: LOCAL_MODE ? 'Supprimer toutes mes données' : 'Supprimer mon compte',
+      message: 'Toutes vos données (profil, allergies, programmes, listes de courses, suivi) seront définitivement supprimées. Cette action est irréversible.',
+      confirmLabel: 'Supprimer définitivement',
+      destructive: true,
+      onConfirm: async () => {
       setBusy(true);
       try {
         const res = await api<{ message: string }>('/me', { method: 'DELETE' });
         await disableDailyReminder();
         await clearDraft();
-        await signOut();
-        if (Platform.OS !== 'web') Alert.alert('Compte supprimé', res.message);
+        if (LOCAL_MODE) queryClient.clear();
+        else await signOut();
+        void res;
         router.replace('/welcome');
       } catch (e) {
         setMessage({ tone: 'danger', text: errorMessage(e) });
         setBusy(false);
       }
+      },
     });
 
   return (
     <Screen>
+      {confirmEl}
       {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
-      <Card>
-        <AppText variant="caption" color={colors.textMuted}>
-          CONNECTÉ·E AVEC
-        </AppText>
-        <AppText variant="bodyStrong">{account.data?.email ?? '—'}</AppText>
-      </Card>
+      {LOCAL_MODE ? (
+        <StorageNotice />
+      ) : (
+        <Card>
+          <AppText variant="caption" color={colors.textMuted}>
+            CONNECTÉ·E AVEC
+          </AppText>
+          <AppText variant="bodyStrong">{account.data?.email ?? '—'}</AppText>
+        </Card>
+      )}
 
       <SectionHeader title="Mon profil" />
       <Card style={{ paddingVertical: spacing.xs }}>
@@ -129,8 +139,8 @@ export default function Settings() {
         <ListItem icon="shield-checkmark-outline" label="Politique de confidentialité" onPress={() => router.push('/settings/privacy')} />
         <ListItem icon="download-outline" label={busy ? 'Export en cours…' : 'Exporter mes données'} description="Fichier JSON (droit à la portabilité)" onPress={() => !busy && exportData()} />
         <Divider />
-        <ListItem icon="log-out-outline" label="Se déconnecter" onPress={async () => { await signOut(); router.replace('/welcome'); }} />
-        <ListItem icon="trash-outline" label="Supprimer mon compte et mes données" danger onPress={() => !busy && deleteAccount()} />
+        {LOCAL_MODE ? null : <ListItem icon="log-out-outline" label="Se déconnecter" onPress={async () => { await signOut(); router.replace('/welcome'); }} />}
+        <ListItem icon="trash-outline" label={LOCAL_MODE ? 'Supprimer toutes mes données' : 'Supprimer mon compte et mes données'} danger onPress={() => !busy && deleteAccount()} />
       </Card>
     </Screen>
   );

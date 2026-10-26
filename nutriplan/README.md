@@ -23,6 +23,16 @@ Elle est conçue pour le marché français (euros, grammes et millilitres, ingr�
 
 Fonctionnalités du MVP : écran de bienvenue ; questionnaire en 12 étapes, avec barre de progression, retour arrière sans perte et brouillon sauvegardé sur l'appareil ; inscription et connexion Supabase ; tableau de bord ; planning sur 1 à 14 jours (remplacer, déplacer, changer les portions, marquer comme réalisé, favori) ; générateur de menus sous contraintes avec explication en cas de budget insuffisant ; catalogue de 43 recettes de démonstration avec recherche et filtres ; liste de courses intelligente (regroupement, conversions, déduction du stock, rayons, cases à cocher, articles manuels, quantités modifiables, budget recalculé) ; suivi bienveillant (repas préparés, habitudes, objectifs, poids facultatif) ; profil et paramètres (modification, rappel quotidien, confidentialité, export et suppression des données) ; idées de recettes par IA avec repli sur le catalogue.
 
+## Version web autonome (sans serveur)
+
+Pour voir et utiliser NutriPlan tout de suite, sans base de données ni compte, l'application existe aussi en **site web autonome**. Les mêmes écrans et les mêmes règles métier (`@nutriplan/core`) tournent dans le navigateur, avec le catalogue de démonstration embarqué.
+
+```bash
+npm run build:web -w @nutriplan/mobile     # produit apps/mobile/dist-web/
+```
+
+Le dossier `dist-web/` se dépose tel quel sur n'importe quel hébergement statique (GitHub Pages, Netlify…), à la racine ou dans un sous-dossier. Les données sont enregistrées dans le navigateur de l'appareil (ou dans l'espace personnel de la personne quand la page est ouverte sur claude.ai). Dans cette version, il n'y a ni compte ni synchronisation entre appareils, et les « idées » proviennent du catalogue, sans IA.
+
 ## Prérequis
 
 * Node.js **22.9 ou plus récent** et npm 10

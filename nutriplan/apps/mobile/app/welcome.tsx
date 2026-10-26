@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText, Button, FadeIn, Notice } from '../src/components/ui';
-import { APP_NAME, isApiConfigured } from '../src/lib/config';
+import { StorageNotice } from '../src/components/storage-notice';
+import { APP_NAME, isApiConfigured, LOCAL_MODE } from '../src/lib/config';
 import { useAuth } from '../src/lib/auth';
 import { colors, maxContentWidth, radius, spacing } from '../src/theme/tokens';
 
@@ -29,14 +30,15 @@ export default function Welcome() {
           </FadeIn>
         </View>
         <FadeIn delay={150}>
-          {!configured || !isApiConfigured ? (
+          <StorageNotice />
+          {!LOCAL_MODE && (!configured || !isApiConfigured) ? (
             <Notice tone="warning" title="Configuration requise">
               Les services de connexion ou d’API ne sont pas configurés sur cette version de l’application (voir le fichier .env.example).
             </Notice>
           ) : null}
           <View style={{ gap: spacing.md }}>
             <Button label="Commencer" icon="arrow-forward" onPress={() => router.push('/onboarding')} disabled={!isApiConfigured} />
-            <Button label="Se connecter" variant="secondary" onPress={() => router.push('/auth/sign-in')} disabled={!configured} />
+            {LOCAL_MODE ? null : <Button label="Se connecter" variant="secondary" onPress={() => router.push('/auth/sign-in')} disabled={!configured} />}
           </View>
         </FadeIn>
       </View>

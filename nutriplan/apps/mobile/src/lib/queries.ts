@@ -270,3 +270,12 @@ export const useRecipeIdeas = () =>
     mutationFn: (body: { mealType: MealType; note?: string }) =>
       api<{ source: 'ai' | 'catalogue'; notice: string; ideas: RecipeIdea[] }>('/ai/recipe-ideas', { method: 'POST', body }),
   });
+
+/** Version web autonome : où les données sont enregistrées (espace personnel, appareil ou mémoire). */
+export const useStorageKind = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['storage-kind'],
+    queryFn: async () => (await import('./local/store')).storageKind(),
+    enabled,
+    staleTime: Infinity,
+  });

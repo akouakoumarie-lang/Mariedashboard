@@ -52,7 +52,7 @@ nutriplan/
 │   ├── prisma/schema.prisma  # schéma de base de données
 │   ├── prisma/migrations/    # migrations versionnées
 │   ├── prisma/seed.ts        # chargement du catalogue de démonstration
-│   ├── prisma/seed-data/     # 74 ingrédients, 43 recettes
+│   ├── (catalogue : packages/core/src/demo — 74 ingrédients, 43 recettes)
 │   ├── src/auth/             # vérification des jetons Supabase, garde globale
 │   ├── src/me/               # profil, préférences, allergies, stock, export, suppression
 │   ├── src/catalog/          # ingrédients, recettes, favoris

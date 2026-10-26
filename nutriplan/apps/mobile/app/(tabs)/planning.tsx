@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useConfirm } from '../../src/components/confirm';
 import { MealCard } from '../../src/components/food';
 import { AppText, Badge, Button, Card, EmptyState, ErrorState, Loading, Notice, Row, Screen, SectionHeader } from '../../src/components/ui';
 import { ApiError, errorMessage } from '../../src/lib/api';
@@ -8,22 +9,12 @@ import { capitalize, formatDayLong, formatDayShort, formatEuros, localToday } fr
 import { useCurrentPlan, useGeneratePlan, usePlanHistory } from '../../src/lib/queries';
 import { colors, radius, spacing } from '../../src/theme/tokens';
 
-function confirm(title: string, message: string, onConfirm: () => void) {
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: 'Annuler', style: 'cancel' },
-    { text: 'Continuer', onPress: onConfirm },
-  ]);
-}
-
 export default function PlanningScreen() {
   const plan = useCurrentPlan();
   const history = usePlanHistory();
   const generate = useGeneratePlan();
   const [selected, setSelected] = useState<string | null>(null);
+  const [confirmEl, confirm] = useConfirm();
   const [failure, setFailure] = useState<{ message: string; suggestions: string[] } | null>(null);
 
   const days = plan.data?.days ?? [];
@@ -48,7 +39,7 @@ export default function PlanningScreen() {
     );
   };
   const onGenerate = () => {
-    if (plan.data) confirm('Nouveau programme', 'Le programme actuel sera archivé (il reste consultable dans l’historique) et une nouvelle liste de courses sera créée.', runGenerate);
+    if (plan.data) confirm({ title: 'Nouveau programme', message: 'Le programme actuel sera archivé (il reste consultable dans l’historique) et une nouvelle liste de courses sera créée.', confirmLabel: 'Générer un nouveau programme', onConfirm: runGenerate });
     else runGenerate();
   };
 
@@ -60,6 +51,7 @@ export default function PlanningScreen() {
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={plan.isRefetching} onRefresh={() => void plan.refetch()} tintColor={colors.primary} />}>
+      {confirmEl}
       {failure ? (
         <Notice tone="danger" title="Génération impossible">
           <AppText variant="small" color={colors.danger}>

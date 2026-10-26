@@ -4,6 +4,7 @@ import { Platform, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
 import { Loading } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
+import { LOCAL_MODE } from '../../src/lib/config';
 import { colors, typography } from '../../src/theme/tokens';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -13,7 +14,7 @@ const icon = (name: IconName) => ({ color, size }: { color: ColorValue; size: nu
 export default function TabsLayout() {
   const { session, initializing } = useAuth();
   if (initializing) return <Loading />;
-  if (!session) return <Redirect href="/welcome" />;
+  if (!session && !LOCAL_MODE) return <Redirect href="/welcome" />;
   return (
     <Tabs
       screenOptions={{

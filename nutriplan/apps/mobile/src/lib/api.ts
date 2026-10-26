@@ -1,4 +1,4 @@
-import { API_URL, isApiConfigured } from './config';
+import { API_URL, isApiConfigured, LOCAL_MODE } from './config';
 import { supabase } from './supabase';
 
 /** Erreur d'API avec un message compréhensible, issu du serveur ou du client. */
@@ -16,6 +16,10 @@ export class ApiError extends Error {
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export async function api<T>(path: string, options: { method?: Method; body?: unknown; auth?: boolean } = {}): Promise<T> {
+  if (LOCAL_MODE) {
+    const { localApi } = await import('./local/server');
+    return localApi<T>(path, options.method ?? 'GET', options.body);
+  }
   if (!isApiConfigured) throw new ApiError(0, 'NOT_CONFIGURED', "L'adresse du serveur NutriPlan n'est pas configurée (EXPO_PUBLIC_API_URL).");
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';

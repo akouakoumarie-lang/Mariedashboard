@@ -15,7 +15,8 @@ const config: ExpoConfig = {
   android: { package: 'fr.nutriplan.app', adaptiveIcon: { backgroundColor: '#2F4A3A' } },
   web: { output: 'single', bundler: 'metro' },
   plugins: ['expo-router', 'expo-notifications'],
-  experiments: { typedRoutes: false },
+  // Préfixe d'URL du site web (voir scripts/build-web.mjs).
+  experiments: { typedRoutes: false, ...(process.env.EXPO_PUBLIC_BASE_URL ? { baseUrl: process.env.EXPO_PUBLIC_BASE_URL } : {}) },
 };
 
 export default config;

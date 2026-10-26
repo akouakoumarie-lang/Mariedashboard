@@ -7,3 +7,4 @@ export * from './shopping';
 export * from './nutrition';
 export * from './generator';
 export * from './validation';
+export * from './demo';

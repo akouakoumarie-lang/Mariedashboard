@@ -1,0 +1,21 @@
+{
+  "name": "nutriplan",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NutriPlan — application mobile de nutrition et de planification alimentaire (monorepo)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:core": "npm run build -w @nutriplan/core",
+    "test": "npm run test -w @nutriplan/core && npm run test -w @nutriplan/api",
+    "test:e2e": "npm run test:e2e -w @nutriplan/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "api:dev": "npm run start:dev -w @nutriplan/api",
+    "mobile:start": "npm run start -w @nutriplan/mobile"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

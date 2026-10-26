@@ -1,0 +1,21 @@
+{
+  "name": "@nutriplan/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Logique métier partagée : unités, portions, contraintes, menus, courses, budget, validation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "react-native": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

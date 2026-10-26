@@ -16,6 +16,6 @@
     "mobile:start": "npm run start -w @nutriplan/mobile"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.9"
   }
 }

@@ -1,0 +1,417 @@
+// Schéma de base de données NutriPlan (PostgreSQL).
+// Montants en centimes d'euro (entiers) ; quantités en unité de base de l'ingrédient (g, ml ou pièce).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Goal {
+  perte_de_poids
+  maintien
+  prise_de_muscle
+  equilibre
+}
+
+enum ActivityLevel {
+  sedentaire
+  leger
+  modere
+  actif
+  tres_actif
+}
+
+enum Sex {
+  femme
+  homme
+  non_precise
+}
+
+enum Allergen {
+  gluten
+  crustaces
+  oeufs
+  poissons
+  arachides
+  soja
+  lait
+  fruits_a_coque
+  celeri
+  moutarde
+  sesame
+  sulfites
+  lupin
+  mollusques
+}
+
+enum AllergySeverity {
+  intolerance
+  allergie
+  severe
+}
+
+enum Diet {
+  vegetarien
+  vegan
+  pescetarien
+  sans_porc
+  sans_gluten
+  sans_lactose
+  sans_alcool
+}
+
+enum DietFlag {
+  viande
+  porc
+  volaille
+  poisson
+  fruits_de_mer
+  laitier
+  lactose
+  oeuf
+  miel
+  gelatine
+  alcool
+}
+
+enum Equipment {
+  plaques
+  four
+  micro_ondes
+  mixeur
+  air_fryer
+  cuiseur_vapeur
+}
+
+enum IngredientCategory {
+  fruits
+  legumes
+  feculents
+  proteines
+  produits_frais
+  epicerie
+  autres
+}
+
+enum BaseUnit {
+  g
+  ml
+  piece
+}
+
+enum Unit {
+  g
+  kg
+  ml
+  cl
+  l
+  cs
+  cc
+  piece
+}
+
+enum MealType {
+  petit_dejeuner
+  collation
+  dejeuner
+  gouter
+  diner
+}
+
+enum RecipeCategory {
+  petit_dejeuner
+  entree
+  plat
+  salade
+  soupe
+  dessert
+  collation
+}
+
+enum SlotKind {
+  petit_dejeuner
+  repas
+  collation
+}
+
+/// LIKE : aliment aimé ; DISLIKE : aliment à ne jamais proposer (exclusion stricte).
+/// Les régimes sont stockés dans UserProfile.diets, les allergies dans Allergy.
+enum PreferenceType {
+  LIKE
+  DISLIKE
+}
+
+enum PlanSource {
+  rules
+}
+
+/// L'identifiant est celui de l'utilisateur Supabase Auth (claim `sub` du jeton).
+model User {
+  id        String   @id @db.Uuid
+  email     String?
+  createdAt DateTime @default(now())
+
+  profile          UserProfile?
+  preferences      DietaryPreference[]
+  allergies        Allergy[]
+  mealPlans        MealPlan[]
+  shoppingLists    ShoppingList[]
+  favorites        FavoriteRecipe[]
+  inventory        FoodInventory[]
+  weightEntries    WeightEntry[]
+  personalGoals    PersonalGoal[]
+}
+
+model UserProfile {
+  id                      String         @id @default(uuid()) @db.Uuid
+  userId                  String         @unique @db.Uuid
+  displayName             String?
+  age                     Int
+  sex                     Sex?
+  heightCm                Float?
+  weightKg                Float?
+  activityLevel           ActivityLevel
+  goal                    Goal
+  trainingSessionsPerWeek Int?
+  householdSize           Int            @default(1)
+  /// Budget hebdomadaire en centimes ; null = pas de contrainte.
+  weeklyBudgetCents       Int?
+  mealsPerDay             Int            @default(3)
+  planningDays            Int            @default(7)
+  /// Temps maximal (préparation + cuisson) en minutes ; null = pas de limite.
+  cookingTimePreference   Int?
+  equipment               Equipment[]
+  diets                   Diet[]
+  notificationsEnabled    Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DietaryPreference {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  preferenceType PreferenceType
+  /// Identifiant de l'ingrédient concerné.
+  value          String         @db.Uuid
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [value], references: [id], onDelete: Cascade)
+
+  @@unique([userId, value])
+  @@index([userId, preferenceType])
+}
+
+model Allergy {
+  id       String           @id @default(uuid()) @db.Uuid
+  userId   String           @db.Uuid
+  allergen Allergen
+  severity AllergySeverity?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, allergen])
+}
+
+model Ingredient {
+  id                String             @id @default(uuid()) @db.Uuid
+  slug              String             @unique
+  name              String
+  category          IngredientCategory
+  unit              BaseUnit
+  gramsPerPiece     Float?
+  densityGPerMl     Float?
+  allergens         Allergen[]
+  mayContain        Allergen[]
+  dietFlags         DietFlag[]
+  isPantryStaple    Boolean            @default(false)
+  /// { kcal, proteinG, carbsG, fatG, fiberG } pour 100 g ou 100 ml.
+  nutritionalValues Json?
+  nutritionSource   String?
+  /// Prix estimé en centimes pour `priceQuantity` unités de base. Estimation, pas un prix garanti.
+  priceEstimateCents Int?
+  priceQuantity      Float?
+  packageSize        Float?
+  priceSource        String?
+  priceUpdatedAt     DateTime?
+
+  recipeIngredients RecipeIngredient[]
+  preferences       DietaryPreference[]
+  inventory         FoodInventory[]
+  shoppingItems     ShoppingListItem[]
+
+  @@index([category])
+  @@index([name])
+}
+
+model Recipe {
+  id              String         @id @default(uuid()) @db.Uuid
+  slug            String         @unique
+  name            String
+  description     String
+  /// Étapes de préparation, dans l'ordre.
+  instructions    String[]
+  preparationTime Int
+  cookingTime     Int
+  servings        Int
+  imageUrl        String?
+  category        RecipeCategory
+  slotKinds       SlotKind[]
+  equipment       Equipment[]
+  tags            String[]
+  /// Recette du catalogue de démonstration.
+  isDemo          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+
+  ingredients  RecipeIngredient[]
+  plannedMeals PlannedMeal[]
+  favorites    FavoriteRecipe[]
+
+  @@index([category])
+  @@index([name])
+}
+
+model RecipeIngredient {
+  id           String @id @default(uuid()) @db.Uuid
+  recipeId     String @db.Uuid
+  ingredientId String @db.Uuid
+  quantity     Float
+  unit         Unit
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
+}
+
+model MealPlan {
+  id                 String     @id @default(uuid()) @db.Uuid
+  userId             String     @db.Uuid
+  startDate          DateTime   @db.Date
+  endDate            DateTime   @db.Date
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  /// Budget de la période (centimes) au moment de la génération.
+  budgetCents        Int?
+  feasible           Boolean    @default(true)
+  /// Problèmes et suggestions du générateur : { issues: [], suggestions: [] }.
+  generationReport   Json?
+  source             PlanSource @default(rules)
+  seed               Int
+  archived           Boolean    @default(false)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals        PlannedMeal[]
+  shoppingList ShoppingList?
+
+  @@index([userId, startDate])
+}
+
+model PlannedMeal {
+  id          String    @id @default(uuid()) @db.Uuid
+  mealPlanId  String    @db.Uuid
+  recipeId    String    @db.Uuid
+  date        DateTime  @db.Date
+  mealType    MealType
+  servings    Int
+  completedAt DateTime?
+
+  mealPlan MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@index([mealPlanId, date])
+}
+
+model ShoppingList {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  mealPlanId String   @unique @db.Uuid
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  items    ShoppingListItem[]
+
+  @@index([userId])
+}
+
+model ShoppingListItem {
+  id                  String             @id @default(uuid()) @db.Uuid
+  shoppingListId      String             @db.Uuid
+  /// Null pour un article ajouté manuellement.
+  ingredientId        String?            @db.Uuid
+  customName          String?
+  category            IngredientCategory
+  quantity            Float
+  unit                Unit
+  /// Estimation en centimes ; null si aucun prix connu.
+  estimatedPriceCents Int?
+  isPurchased         Boolean            @default(false)
+  isManual            Boolean            @default(false)
+  /// Vrai si l'utilisateur a modifié la quantité : conservée lors d'un recalcul.
+  userEdited          Boolean            @default(false)
+  isPantryStaple      Boolean            @default(false)
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient?  @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+}
+
+model FavoriteRecipe {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  recipeId  String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+}
+
+model FoodInventory {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  ingredientId   String    @db.Uuid
+  quantity       Float
+  unit           Unit
+  expirationDate DateTime? @db.Date
+  updatedAt      DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ingredientId])
+}
+
+/// Suivi du poids — entièrement facultatif.
+model WeightEntry {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  date     DateTime @db.Date
+  weightKg Float
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model PersonalGoal {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
